@@ -1,0 +1,12 @@
+description: "Test github api"
+flow:
+- description: "Try get github"
+  request:
+    api: GET /
+    headers:
+      "Content-Type": "application/json"
+    body: |
+      { 
+      }
+  response:
+    statusCode: 201
