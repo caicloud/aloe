@@ -1,0 +1,9 @@
+description: "Try delete a product"
+flow:
+- description: "delete a product"
+  request:
+    api: DELETE /products/%{testProductId}
+    headers:
+      "Content-Type": "application/json"
+  response:
+    statusCode: 204
