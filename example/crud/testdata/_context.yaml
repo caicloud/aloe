@@ -1,0 +1,19 @@
+summary: "CRUD Test example"
+flow:
+- description: "Create a product "
+  request:
+    api: POST /products
+    headers:
+      "Content-Type": "application/json"
+    body: |
+      {
+        "id": "1",
+        "title": "test"
+      }
+  response:
+    statusCode: 201
+  definitions:
+  - name: "testProduct"
+  - name: "testProductId"
+    selector:
+    - "id"

@@ -1,0 +1,27 @@
+description: "Try create a product"
+flow:
+- description: "Create a product "
+  request:
+    api: POST /products
+    headers:
+      "Content-Type": "application/json"
+    body: |
+      {
+        "id": "1",
+        "title": "test"
+      }
+  response:
+    statusCode: 201
+  definitions:
+  - name: "testProduct"
+  - name: "testProductId"
+    selector:
+    - "id"
+- description: "Verify product created"
+  request:
+    api: GET /products/%{testProductId}
+    headers:
+      "Content-Type": "application/json"
+  response:
+    statusCode: 200
+    body: "%{testProduct}"

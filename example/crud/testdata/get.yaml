@@ -1,0 +1,10 @@
+description: "Try get a product"
+flow:
+- description: "Get product inited in _context.yaml"
+  request:
+    api: GET /products/%{testProductId}
+    headers:
+      "Content-Type": "application/json"
+  response:
+    statusCode: 200
+    body: "%{testProduct}"
