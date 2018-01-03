@@ -1,10 +1,12 @@
-package example
+package crud
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/caicloud/aloe"
+	"github.com/caicloud/aloe/examples/crud/server"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 
@@ -13,7 +15,7 @@ import (
 
 func TestAPI(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	f := framework.NewFramework("https://api.github.com/", cleanUp,
+	f := aloe.NewFramework("localhost:8080", cleanUp,
 		"testdata",
 	)
 	if err := f.Run(); err != nil {
@@ -24,9 +26,10 @@ func TestAPI(t *testing.T) {
 }
 
 func cleanUp() {
-
+	// clean up databases
 }
 
 var _ = ginkgo.BeforeSuite(func() {
-
+	server.Product{}.Register()
+	go http.ListenAndServe(":8080", nil)
 })
