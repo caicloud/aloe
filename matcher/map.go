@@ -39,9 +39,9 @@ type FieldsMatcher struct {
 	// Matchers for each field.
 	Fields Fields
 
-	// Exists defines existance of fields
+	// Exists defines existence of fields
 	// If field is not in it, it will not be
-	// checked for existance
+	// checked for existence
 	Exists map[string]bool
 
 	// State.
@@ -120,7 +120,7 @@ func (m *FieldsMatcher) matchFields(actual interface{}) (errs []error) {
 	for fieldName, exist := range m.Exists {
 		_, ok := fields[fieldName]
 		if exist != ok {
-			errs = append(errs, errorsutil.Nest("."+fieldName, fmt.Errorf("field existance err, expected: %v, actual: %v", exist, ok)))
+			errs = append(errs, errorsutil.Nest("."+fieldName, fmt.Errorf("field existence err, expected: %v, actual: %v", exist, ok)))
 		}
 	}
 
