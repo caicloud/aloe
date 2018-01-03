@@ -18,7 +18,6 @@ For example, a dir should be created to put `context` and `case`.
 
 ```
 mkdir test/testdata
-
 ```
 
 First, define `context` in `test/testdata/_context.yaml`.
@@ -56,7 +55,7 @@ Then, define `case` in `test/testdata/get.yaml`.
 
 Normally test case should only be some simplest http requests.
 
-```
+```yaml
 # test/testdata/get.yaml
 description: "Try to GET a product"
 flow:
@@ -152,7 +151,7 @@ Sometimes only format of an auto-generated value need be checked.
 
 Some special validators are predefined, e.g. `$regexp`
 
-```
+```yaml
 flow:
 - description: "Create a product"
   response:
