@@ -147,7 +147,7 @@ func (t *template) Render(vs map[string]Variable) (string, error) {
 		out += t.snippts[i]
 		v, ok := vs[varName]
 		if !ok {
-			return "", fmt.Errorf("can't find varibale %v", varName)
+			return "", fmt.Errorf("can't find variable %v", varName)
 		}
 		out += v.String()
 	}

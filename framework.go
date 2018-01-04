@@ -120,7 +120,7 @@ func (gf *genericFramework) itFunc(ctx *types.Context, file *data.File) func() {
 					resp, err := gf.client.DoRequest(ctx, &rt)
 					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					return resp
-				}, ev.Timeout.Duration, ev.Interval.Duration).Should(respMatcher)
+				}, timeout.Duration, interval.Duration).Should(respMatcher)
 
 			} else {
 				resp, err := gf.client.DoRequest(ctx, &rt)

@@ -7,27 +7,34 @@ import (
 	"github.com/emicklei/go-restful"
 )
 
+// Product defines product example
 type Product struct {
-	Id    string `json:"id"`
+	ID    string `json:"id"`
 	Title string `json:"title"`
 }
 
 func (p Product) get(req *restful.Request, resp *restful.Response) {
 	id := req.PathParameter("id")
-	resp.WriteHeaderAndEntity(200, Product{
-		Id:    id,
+	if err := resp.WriteHeaderAndEntity(200, Product{
+		ID:    id,
 		Title: "test",
-	})
+	}); err != nil {
+		log.Printf("response error: %v", err)
+	}
 }
 
 func (p Product) post(req *restful.Request, resp *restful.Response) {
 	updatedProduct := new(Product)
 	err := req.ReadEntity(updatedProduct)
 	if err != nil { // bad request
-		resp.WriteErrorString(http.StatusBadRequest, err.Error())
+		if err := resp.WriteErrorString(http.StatusBadRequest, err.Error()); err != nil {
+			log.Printf("response error: %v", err)
+		}
 		return
 	}
-	resp.WriteHeaderAndEntity(201, updatedProduct)
+	if err := resp.WriteHeaderAndEntity(201, updatedProduct); err != nil {
+		log.Printf("response error: %v", err)
+	}
 }
 
 func (p Product) delete(req *restful.Request, resp *restful.Response) {
