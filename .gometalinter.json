@@ -1,0 +1,24 @@
+{
+  "Vendor": true,
+  "DisableAll": true,
+  "Enable": [
+    "vet",
+    "safesql",
+    "errcheck",
+    "goconst",
+    "goimports",
+    "varcheck",
+    "gas",
+    "megacheck",
+    "lll",
+    "unconvert",
+    "misspell",
+    "golint",
+    "deadcode",
+    "unconvert"
+  ],
+  "Aggregate": true,
+  "WarnUnmatchedNolint": true,
+  "LineLength": 160,
+  "Skip": ["examples", "docs"]
+}
