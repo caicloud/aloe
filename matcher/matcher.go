@@ -80,7 +80,7 @@ func convertToMap(expr interface{}) (map[string]interface{}, error) {
 }
 
 const (
-	// ExistsMatcher defines special matcher to match non-existant key
+	// ExistsMatcher defines special matcher to match non-existent key
 	ExistsMatcher = "$exists"
 
 	// RegexpMatcher defines matcher to match regexp
