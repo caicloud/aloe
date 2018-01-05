@@ -12,6 +12,7 @@ import (
 	"github.com/caicloud/aloe/matcher"
 	"github.com/caicloud/aloe/template"
 	"github.com/caicloud/aloe/types"
+	"github.com/caicloud/aloe/utils/close"
 	"github.com/caicloud/aloe/utils/indent"
 	"github.com/caicloud/aloe/utils/jsonutil"
 	"github.com/onsi/gomega/format"
@@ -88,7 +89,7 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 	if !ok {
 		return false, fmt.Errorf("%v is type %T, expected response", actual, actual)
 	}
-	defer resp.Body.Close()
+	defer close.Close(resp.Body)
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

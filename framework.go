@@ -110,11 +110,15 @@ func (gf *genericFramework) itFunc(ctx *types.Context, file *data.File) func() {
 			if ev := rt.Response.Eventually; ev != nil {
 				timeout := ev.Timeout
 				if timeout == nil {
-					timeout = &types.Duration{defaultTimeout}
+					timeout = &types.Duration{
+						Duration: defaultTimeout,
+					}
 				}
 				interval := ev.Interval
 				if interval == nil {
-					interval = &types.Duration{defaultInterval}
+					interval = &types.Duration{
+						Duration: defaultInterval,
+					}
 				}
 				gomega.Eventually(func() *http.Response {
 					resp, err := gf.client.DoRequest(ctx, &rt)
