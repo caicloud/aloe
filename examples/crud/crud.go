@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"testing"
 
 	"github.com/caicloud/aloe"
 	"github.com/caicloud/aloe/examples/crud/server"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-
-	"testing"
 )
 
-func TestAPI(t *testing.T) {
+// RunTEST runs crud test
+func RunTEST(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	f := aloe.NewFramework("localhost:8080", cleanUp,
 		"testdata",
@@ -22,7 +22,8 @@ func TestAPI(t *testing.T) {
 		fmt.Printf("can't run framework: %v", err)
 		os.Exit(1)
 	}
-	ginkgo.RunSpecs(t, "API Suite")
+	ginkgo.RunSpecs(t, "CRUD Suite")
+
 }
 
 func cleanUp() {
