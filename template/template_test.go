@@ -9,8 +9,8 @@ import (
 func TestNew(t *testing.T) {
 	cases := []struct {
 		raw      string
-		varNames []string
 		snippts  []string
+		varNames []string
 		hasError bool
 	}{
 		{
@@ -88,7 +88,6 @@ func TestNew(t *testing.T) {
 		}
 		temp, ok := in.(*template)
 		assert.Equal(t, true, ok, "Template is a *template")
-		assert.NoError(t, err, "error should be nil")
 		assert.Equal(t, c.snippts, temp.snippts, "snippts are not equal")
 		assert.Equal(t, c.varNames, temp.varNames, "params are not equal")
 	}
@@ -112,12 +111,12 @@ func TestRender(t *testing.T) {
 			},
 			map[string]Variable{
 				"cluster": {
-					raw:  []byte("cid"),
+					Raw:  []byte("cid"),
 					Name: "cluster",
 					Type: StringType,
 				},
 				"partition": {
-					raw:  []byte("1.5"),
+					Raw:  []byte("1.5"),
 					Name: "partition",
 					Type: NumberType,
 				},
@@ -130,18 +129,18 @@ func TestRender(t *testing.T) {
 				[]string{"cluster", "partition"},
 				[]string{
 					`{"cluster": "`,
-					`", "partitions: ",
-					"}`,
+					`", "partition": "`,
+					`"}`,
 				},
 			},
 			map[string]Variable{
 				"cluster": {
-					raw:  []byte("cid"),
+					Raw:  []byte("cid"),
 					Name: "cluster",
 					Type: StringType,
 				},
 				"partition": {
-					raw:  []byte("1.5"),
+					Raw:  []byte("1.5"),
 					Name: "partition",
 					Type: NumberType,
 				},
