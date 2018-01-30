@@ -2,6 +2,7 @@ package crud
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"testing"
@@ -23,7 +24,6 @@ func RunTEST(t *testing.T) {
 		os.Exit(1)
 	}
 	ginkgo.RunSpecs(t, "CRUD Suite")
-
 }
 
 func cleanUp() {
@@ -32,5 +32,9 @@ func cleanUp() {
 
 var _ = ginkgo.BeforeSuite(func() {
 	server.Product{}.Register()
-	go http.ListenAndServe(":8080", nil)
+	listener, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		fmt.Printf("unable to listen on 8080")
+	}
+	go http.Serve(listener, nil)
 })

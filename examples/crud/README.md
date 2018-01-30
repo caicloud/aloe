@@ -1,5 +1,6 @@
 # CRUD
-CRUD is a demo test Product CRUD api.
+
+CRUD is a demo app to CRUD product API.
 
 ```sh
 $ go test -v
