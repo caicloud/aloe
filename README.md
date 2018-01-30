@@ -1,5 +1,7 @@
-# Aloe 
+# Aloe
 
+[![Build Status](https://travis-ci.org/caicloud/aloe.svg?branch=master)](https://travis-ci.org/caicloud/aloe)
+[![Coverage Status](https://coveralls.io/repos/github/caicloud/aloe/badge.svg?branch=master)](https://coveralls.io/github/caicloud/aloe?branch=master)
 [![GoDoc](http://godoc.org/github.com/caicloud/aloe?status.svg)](http://godoc.org/github.com/caicloud/aloe)
 [![Go Report Card](https://goreportcard.com/badge/github.com/caicloud/aloe)](https://goreportcard.com/report/github.com/caicloud/aloe)
 
@@ -10,13 +12,13 @@ Now only json API is supported.
 
 ## Get Started
 
-Aloe assumes that API test is consist of `context` and `case`. 
+Aloe assumes that API tests consist of `context` and `case`.
 
-If a GET API should be tested, the resource will be created in `context` and getted in `case`.
+If a `GET` API is to be tested, the resource will be created in `context` and get in `case`.
 
 For example, a dir should be created to put `context` and `case`.
 
-```
+```sh
 mkdir test/testdata
 ```
 
@@ -25,7 +27,7 @@ First, define `context` in `test/testdata/_context.yaml`.
 `context` is defined in `_context.yaml`. Each dir means a context and context can be nested just like dir.
 All test cases in the same dir will always run in same context.
 
-Normally context is used to init data in database so that all test cases will be tested in determined context.
+Normally `context` is used to init data in database so that all test cases will be tested in determined context.
 
 ```yaml
 # test/testdata/_context.yaml
@@ -51,7 +53,7 @@ flow:
 
 Then, define `case` in `test/testdata/get.yaml`.
 
-`case` defines a test case which is defined in a yaml file. 
+`case` defines a test case which is defined in a yaml file.
 
 Normally test case should only be some simplest http requests.
 
@@ -107,9 +109,9 @@ flow:
     - "id"
 ```
 
-A variable called `testProductId` will be defined. The value of `testProductId` is from the roundtrip response.
+A variable called `testProductId` will be defined. The value of `testProductId` is from the round trip response.
 
-Variable can also be a json snippet. 
+Variable can also be a json snippet.
 
 ```
 response:
@@ -140,14 +142,13 @@ response:
 	"aaa",
 	"bbb"
 ]
-
 ```
 
-If a varibale is defined, it can be used in roundtrip with format %{name}.
+If a variables is defined, it can be used in round trip with format `%{name}`.
 
 ## Body validator
 
-Sometimes only format of an auto-generated value need be checked. 
+Sometimes only format of an auto-generated value need be checked.
 
 Some special validators are predefined, e.g. `$regexp`
 
@@ -172,9 +173,8 @@ Now only `$regexp` and `$exists` is supported (more sp validator will be added).
 
 ## Examples
 
-we can get some examples in:
+You can see some examples in:
 
-- [get-started](./example/get-started)
+* [get-started](./example/get-started)
 
-- [crud](./example/crud)
-
+* [crud](./example/crud)
