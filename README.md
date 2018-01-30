@@ -5,29 +5,29 @@
 [![GoDoc](http://godoc.org/github.com/caicloud/aloe?status.svg)](http://godoc.org/github.com/caicloud/aloe)
 [![Go Report Card](https://goreportcard.com/badge/github.com/caicloud/aloe)](https://goreportcard.com/report/github.com/caicloud/aloe)
 
-Aloe is a declarative API test framework based on [ginkgo](https://github.com/onsi/ginkgo) and [gomega](https://github.com/onsi/gomega).
-It aims to write and read API test cases simply.
+Aloe is a declarative API test framework based on [ginkgo](https://github.com/onsi/ginkgo), [gomega](https://github.com/onsi/gomega)
+and [yaml](http://yaml.org/). It aims to help write and read API test cases simpler.
 
-Now only json API is supported.
+DISCLAIMER:
+- only json API is supported now
+- avoid using Aloe for extremely complex test, use ginkgo directly instead
 
-## Get Started
+## Terminology
 
-Aloe assumes that API tests consist of `context` and `case`.
+There are two important concepts in aloe:
 
-If a `GET` API is to be tested, the resource will be created in `context` and get in `case`.
+- `case`: case means a test case, for example, get an endpoint and verify its output.
+- `context`: to simply put, a context is a group of cases. Usually, context is used to init data in database, so that all test cases will be tested in a determined context.
 
-For example, a dir should be created to put `context` and `case`.
+## Getting Started
 
-```sh
-mkdir test/testdata
+Following is a getting started example for using Aloe. First, create a directory to put `context` and `case` yaml files.
+
+```
+mkdir -p test/testdata
 ```
 
-First, define `context` in `test/testdata/_context.yaml`.
-
-`context` is defined in `_context.yaml`. Each dir means a context and context can be nested just like dir.
-All test cases in the same dir will always run in same context.
-
-Normally `context` is used to init data in database so that all test cases will be tested in determined context.
+Then, define your `context` in `_context.yaml`.
 
 ```yaml
 # test/testdata/_context.yaml
@@ -51,11 +51,12 @@ flow:
     - "id"
 ```
 
-Then, define `case` in `test/testdata/get.yaml`.
+As mentioned above, a context is used to run a group of test cases in a determined environment. In the above example,
+we define a context which simply sends a POST request to `/products` with product name `test`; therefore, all test
+cases in this context will expect product `test` exists.
 
-`case` defines a test case which is defined in a yaml file.
-
-Normally test case should only be some simplest http requests.
+Now with context setup, we can start defining `case`. Here, we define a test case in `test/testdata/get.yaml` to get
+and verify product `test`.
 
 ```yaml
 # test/testdata/get.yaml
@@ -70,7 +71,7 @@ flow:
     statusCode: 200
 ```
 
-Finally, some go codes should be writed in `test` dir to run the test case
+Finally, some go codes should be written in `test` directory to run the test case:
 
 ```go
 func TestAPI(t *testing.T) {
@@ -96,9 +97,13 @@ var _ = ginkgo.BeforeSuite(func() {
 })
 ```
 
-## Variable
+Pay attention to the `cleanUp` method, which is used to clean up a context.
 
-Sometimes variables should be defined because of auto-generated value by server(e.g. id).
+## Usage
+
+### Variable
+
+Variables can be defined to hold auto-generated value by server (e.g. id). For example:
 
 ```yaml
 flow:
@@ -146,17 +151,15 @@ response:
 
 If a variables is defined, it can be used in round trip with format `%{name}`.
 
-## Body validator
+### Body validator
 
-Sometimes only format of an auto-generated value need be checked.
-
-Some special validators are predefined, e.g. `$regexp`
+Body validator is used to validate response fields. Some special validators are predefined, e.g. `$regexp`
 
 ```yaml
 flow:
 - description: "Create a product"
   response:
-    # validate that id format should match regexp.
+    # validate that id format matches regexp
     # validate that password field is not returned
     body: |
       {
@@ -169,12 +172,30 @@ flow:
       }
 ```
 
-Now only `$regexp` and `$exists` is supported (more sp validator will be added).
+Now only `$regexp` and `$exists` is supported (more special validator will be added in the future).
+
+### Nested context
+
+Context can be nested just like directory. Child context will see all setup in parent context.
+
+```
+tests
+└── testdata
+    ├── _context.yaml
+    ├── basic
+    │   ├── _context.yaml
+    │   ├── create.yaml
+    │   └── update.yaml
+    ├── failure
+    │   ├── _context.yaml
+    │   └── create.yaml
+    └── list
+        ├── _context.yaml
+        └── list_all.yaml
+```
 
 ## Examples
 
-You can see some examples in:
+For more examples, see:
 
-* [get-started](./example/get-started)
-
-* [crud](./example/crud)
+- [crud](./examples/crud)
