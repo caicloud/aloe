@@ -2,12 +2,10 @@ package crud
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"testing"
 
 	"github.com/caicloud/aloe"
-	"github.com/caicloud/aloe/examples/crud/server"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 )
@@ -23,14 +21,8 @@ func RunTEST(t *testing.T) {
 		os.Exit(1)
 	}
 	ginkgo.RunSpecs(t, "CRUD Suite")
-
 }
 
 func cleanUp() {
 	// clean up databases
 }
-
-var _ = ginkgo.BeforeSuite(func() {
-	server.Product{}.Register()
-	go http.ListenAndServe(":8080", nil)
-})

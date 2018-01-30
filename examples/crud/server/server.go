@@ -68,3 +68,10 @@ func (p Product) Register() {
 
 	restful.Add(ws)
 }
+
+// RunServer run http server
+func RunServer(stop chan struct{}) {
+	Product{}.Register()
+	http.ListenAndServe(":8080", nil)
+	<-stop
+}
