@@ -8,12 +8,18 @@ import "github.com/caicloud/aloe/types"
 // merged
 func MergeRoundTrip(origin *types.RoundTrip, patch *types.RoundTrip) *types.RoundTrip {
 	new := CopyRoundTrip(origin)
+	if new == nil {
+		new = &types.RoundTrip{}
+	}
 
 	if patch.Description != "" {
 		new.Description = patch.Description
 	}
 	if patch.Request.API != nil {
 		new.Request.API = patch.Request.API
+	}
+	if new.Request.Headers == nil {
+		new.Request.Headers = map[string]string{}
 	}
 	for k, v := range patch.Request.Headers {
 		new.Request.Headers[k] = v
@@ -35,6 +41,9 @@ func MergeRoundTrip(origin *types.RoundTrip, patch *types.RoundTrip) *types.Roun
 
 // CopyRoundTrip will copy the round trip
 func CopyRoundTrip(origin *types.RoundTrip) *types.RoundTrip {
+	if origin == nil {
+		return nil
+	}
 	// shallow copy
 	new := *origin
 
