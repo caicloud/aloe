@@ -19,20 +19,25 @@ import (
 // Framework defines an API test framework
 type Framework interface {
 	// RegisterCleaner registers cleaner of framework
-	RegisterCleaner(c cleaner.Cleaner) error
+	RegisterCleaner(cs ...cleaner.Cleaner) error
 	// RegisterPresetter registers presetter of framework
-	RegisterPresetter(c preset.Presetter) error
+	RegisterPresetter(ps ...preset.Presetter) error
 	// Run will run the framework
 	Run(t *testing.T)
 }
 
 // NewFramework returns an API test framework
 func NewFramework(host string, dataDirs ...string) Framework {
+	reqHeader := preset.NewHeaderPresetter(preset.RequestType)
+	respHeader := preset.NewHeaderPresetter(preset.ResponseType)
 	return &genericFramework{
-		dataDirs:   dataDirs,
-		client:     roundtrip.NewClient(host),
-		cleaners:   map[string]cleaner.Cleaner{},
-		presetters: map[string]preset.Presetter{},
+		dataDirs: dataDirs,
+		client:   roundtrip.NewClient(host),
+		cleaners: map[string]cleaner.Cleaner{},
+		presetters: map[string]preset.Presetter{
+			reqHeader.Name():  reqHeader,
+			respHeader.Name(): respHeader,
+		},
 	}
 }
 
@@ -47,20 +52,24 @@ type genericFramework struct {
 }
 
 // RegisterCleaner implements Framework interface
-func (gf *genericFramework) RegisterCleaner(c cleaner.Cleaner) error {
-	if _, ok := gf.cleaners[c.Name()]; ok {
-		return fmt.Errorf("can't register cleaner %v: already exists", c.Name())
+func (gf *genericFramework) RegisterCleaner(cs ...cleaner.Cleaner) error {
+	for _, c := range cs {
+		if _, ok := gf.cleaners[c.Name()]; ok {
+			return fmt.Errorf("can't register cleaner %v: already exists", c.Name())
+		}
+		gf.cleaners[c.Name()] = c
 	}
-	gf.cleaners[c.Name()] = c
 	return nil
 }
 
 // RegisterPresetter implements Framework interface
-func (gf *genericFramework) RegisterPresetter(p preset.Presetter) error {
-	if _, ok := gf.presetters[p.Name()]; ok {
-		return fmt.Errorf("can't register presetter %v: already exists", p.Name())
+func (gf *genericFramework) RegisterPresetter(ps ...preset.Presetter) error {
+	for _, p := range ps {
+		if _, ok := gf.presetters[p.Name()]; ok {
+			return fmt.Errorf("can't register presetter %v: already exists", p.Name())
+		}
+		gf.presetters[p.Name()] = p
 	}
-	gf.presetters[p.Name()] = p
 	return nil
 }
 

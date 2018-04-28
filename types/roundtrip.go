@@ -42,6 +42,10 @@ type Response struct {
 	// StatusCode checks response code
 	StatusCode int `json:"statusCode"`
 
+	// Headers defines http header of request
+	// NOTE(liubog2008): whether to use map[string][]string
+	Headers map[string]string `json:"headers,omitempty"`
+
 	// Body is also a template like request body
 	// It can be used to generate a matcher which
 	// can test response body

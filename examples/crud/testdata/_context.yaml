@@ -1,11 +1,13 @@
 summary: "CRUD Test example"
+presetter:
+- name: requestHeader
+  args:
+    content-type: "application/json"
 validatedFlow:
 - constructor:
   - description: "Create a product"
     request:
       api: POST /products
-      headers:
-        "Content-Type": "application/json"
       body: |
         {
           "id": "1",
@@ -22,8 +24,6 @@ validatedFlow:
   - description: "Can get the created product"
     request:
       api: GET /products/%{testProductId}
-      headers:
-        "Content-Type": "application/json"
     response:
       statusCode: 200
       body: "%{testProduct}"

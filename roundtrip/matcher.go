@@ -36,6 +36,8 @@ type ResponseMatcher struct {
 
 	code int
 
+	headers map[string]string
+
 	defs []types.Definition
 
 	parsed bool
@@ -49,8 +51,9 @@ type ResponseMatcher struct {
 func MatchResponse(ctx *types.Context, rt *types.RoundTrip) (ResponseHandler, error) {
 	respConf := rt.Response
 	rm := &ResponseMatcher{
-		code: respConf.StatusCode,
-		defs: rt.Definitions,
+		code:    respConf.StatusCode,
+		headers: respConf.Headers,
+		defs:    rt.Definitions,
 	}
 	if respConf.Body == nil {
 		return rm, nil
@@ -98,6 +101,13 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 	if resp.StatusCode != m.code {
 		m.failures = append(m.failures, fmt.Errorf("status code is not matched, expected: %v, actual: %v", m.code, resp.StatusCode))
 		m.failures = append(m.failures, fmt.Errorf("api status: %v", string(body)))
+	}
+
+	for k, v := range m.headers {
+		hv := resp.Header.Get(k)
+		if hv != v {
+			m.failures = append(m.failures, fmt.Errorf("response header %v is not matched, expected: %v, actual: %v", k, v, hv))
+		}
 	}
 
 	if m.emptyBody && len(body) != 0 {
