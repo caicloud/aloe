@@ -136,8 +136,8 @@ func TestRender(t *testing.T) {
 				},
 			},
 			map[string]jsonutil.Variable{
-				"cluster":   fakeVariable("cluster", `"cid"`),
-				"partition": fakeVariable("partition", `1.5`),
+				"cluster":   fakeVariable("cluster", "cid"),
+				"partition": fakeVariable("partition", "1.5"),
 			},
 			`aaa"cid"bbb1.5ccc`,
 			false,
@@ -152,8 +152,8 @@ func TestRender(t *testing.T) {
 				},
 			},
 			map[string]jsonutil.Variable{
-				"cluster":   fakeVariable("cluster", `"cid"`),
-				"partition": fakeVariable("partition", `1.5`),
+				"cluster":   fakeVariable("cluster", "cid"),
+				"partition": fakeVariable("partition", "1.5"),
 			},
 			`{"cluster": "cid", "partition": "1.5"}`,
 			false,
