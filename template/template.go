@@ -3,57 +3,14 @@ package template
 import (
 	"errors"
 	"fmt"
+
+	"github.com/caicloud/aloe/utils/jsonutil"
 )
-
-// JSONType defines type of JSON
-type JSONType string
-
-const (
-	// ObjectType is json snippet warpped by {}
-	ObjectType JSONType = "object"
-
-	// ArrayType is json snippet warpped by []
-	ArrayType JSONType = "array"
-
-	// StringType is json snippet of string
-	// Value of variable with this type is not warpped by quote
-	StringType JSONType = "string"
-
-	// NumberType is json snippet which is number
-	NumberType JSONType = "number"
-
-	// BooleanType is json snippet which is bool
-	BooleanType JSONType = "boolean"
-
-	// NullType is json snippet means null
-	NullType JSONType = "null"
-)
-
-// Variable is a snippet of json string
-// object => {}
-// array  => []
-// string => "1bb"
-// number => 1.3
-// null   => null
-type Variable struct {
-	Raw  []byte
-	Name string
-	Type JSONType
-}
-
-// String returns variable value
-func (v *Variable) String() string {
-	switch v.Type {
-	case StringType:
-		return string(v.Raw)
-	}
-	return string(v.Raw)
-}
 
 // Template is a simple template support variable
 // Golang template is too complex to use in this case
 type Template interface {
-	Render(vs map[string]Variable) (string, error)
+	Render(vs map[string]jsonutil.Variable) (string, error)
 }
 
 // Template defines template of request
@@ -141,7 +98,7 @@ func New(raw string) (Template, error) {
 // "%{number}" => "1.5"
 // %% => %
 // %%{string} => %{string}
-func (t *template) Render(vs map[string]Variable) (string, error) {
+func (t *template) Render(vs map[string]jsonutil.Variable) (string, error) {
 	out := ""
 	for i, varName := range t.varNames {
 		out += t.snippts[i]

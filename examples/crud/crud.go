@@ -10,31 +10,28 @@ import (
 	"github.com/caicloud/aloe"
 	"github.com/caicloud/aloe/examples/crud/server"
 	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
 )
+
+var s = server.NewProductServer()
 
 // RunTEST runs crud test
 func RunTEST(t *testing.T) {
-	gomega.RegisterFailHandler(ginkgo.Fail)
-	f := aloe.NewFramework("localhost:8080", cleanUp,
+	f := aloe.NewFramework("localhost:8080",
 		"testdata",
 	)
-	if err := f.Run(); err != nil {
-		fmt.Printf("can't run framework: %v", err)
+	if err := f.RegisterCleaner(s); err != nil {
+		fmt.Printf("can't register cleaner: %v", err)
 		os.Exit(1)
 	}
-	ginkgo.RunSpecs(t, "CRUD Suite")
-}
-
-func cleanUp() {
-	// clean up databases
+	f.Run(t)
 }
 
 var _ = ginkgo.BeforeSuite(func() {
-	server.Product{}.Register()
+	s.Register()
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		fmt.Printf("unable to listen on 8080")
+		fmt.Println("can't begin server")
+		os.Exit(1)
 	}
 	go http.Serve(listener, nil)
 })

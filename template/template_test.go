@@ -1,8 +1,10 @@
 package template
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/caicloud/aloe/utils/jsonutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -93,10 +95,34 @@ func TestNew(t *testing.T) {
 	}
 }
 
+type fakeVar struct {
+	name  string
+	value string
+}
+
+func (f *fakeVar) Unmarshal(obj interface{}) error {
+	return fmt.Errorf("UNIMPLEMENTED")
+}
+
+func (f *fakeVar) Name() string {
+	return f.name
+}
+
+func (f *fakeVar) String() string {
+	return f.value
+}
+
+func fakeVariable(name, value string) jsonutil.Variable {
+	return &fakeVar{
+		name:  name,
+		value: value,
+	}
+}
+
 func TestRender(t *testing.T) {
 	cases := []struct {
 		t        *template
-		vs       map[string]Variable
+		vs       map[string]jsonutil.Variable
 		out      string
 		hasError bool
 	}{
@@ -109,17 +135,9 @@ func TestRender(t *testing.T) {
 					`ccc`,
 				},
 			},
-			map[string]Variable{
-				"cluster": {
-					Raw:  []byte("cid"),
-					Name: "cluster",
-					Type: StringType,
-				},
-				"partition": {
-					Raw:  []byte("1.5"),
-					Name: "partition",
-					Type: NumberType,
-				},
+			map[string]jsonutil.Variable{
+				"cluster":   fakeVariable("cluster", `"cid"`),
+				"partition": fakeVariable("partition", `1.5`),
 			},
 			`aaa"cid"bbb1.5ccc`,
 			false,
@@ -133,17 +151,9 @@ func TestRender(t *testing.T) {
 					`"}`,
 				},
 			},
-			map[string]Variable{
-				"cluster": {
-					Raw:  []byte("cid"),
-					Name: "cluster",
-					Type: StringType,
-				},
-				"partition": {
-					Raw:  []byte("1.5"),
-					Name: "partition",
-					Type: NumberType,
-				},
+			map[string]jsonutil.Variable{
+				"cluster":   fakeVariable("cluster", `"cid"`),
+				"partition": fakeVariable("partition", `1.5`),
 			},
 			`{"cluster": "cid", "partition": "1.5"}`,
 			false,
