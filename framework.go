@@ -1,12 +1,16 @@
 package aloe
 
 import (
+	"fmt"
 	"net/http"
+	"sync"
+	"testing"
 	"time"
 
+	"github.com/caicloud/aloe/cleaner"
 	"github.com/caicloud/aloe/data"
+	"github.com/caicloud/aloe/preset"
 	"github.com/caicloud/aloe/roundtrip"
-	"github.com/caicloud/aloe/template"
 	"github.com/caicloud/aloe/types"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -14,18 +18,21 @@ import (
 
 // Framework defines an API test framework
 type Framework interface {
-	Run() error
+	// RegisterCleaner registers cleaner of framework
+	RegisterCleaner(c cleaner.Cleaner) error
+	// RegisterPresetter registers presetter of framework
+	RegisterPresetter(c preset.Presetter) error
+	// Run will run the framework
+	Run(t *testing.T)
 }
 
-// ClearFn defines function to clear context
-type ClearFn func()
-
 // NewFramework returns an API test framework
-func NewFramework(host string, clearFn ClearFn, dataDirs ...string) Framework {
+func NewFramework(host string, dataDirs ...string) Framework {
 	return &genericFramework{
-		dataDirs,
-		roundtrip.NewClient(host),
-		clearFn,
+		dataDirs:   dataDirs,
+		client:     roundtrip.NewClient(host),
+		cleaners:   map[string]cleaner.Cleaner{},
+		presetters: map[string]preset.Presetter{},
 	}
 }
 
@@ -34,47 +41,56 @@ type genericFramework struct {
 
 	client *roundtrip.Client
 
-	clearFn ClearFn
+	cleaners map[string]cleaner.Cleaner
+
+	presetters map[string]preset.Presetter
 }
 
-func (gf *genericFramework) Run() error {
-	for _, r := range gf.dataDirs {
-		dir, err := data.Walk(r)
-		if err != nil {
-			return err
-		}
-		ctx := &types.Context{}
-		f := gf.walk(ctx, dir, true)
-		ginkgo.Describe(dir.Context.Summary, f)
+// RegisterCleaner implements Framework interface
+func (gf *genericFramework) RegisterCleaner(c cleaner.Cleaner) error {
+	if _, ok := gf.cleaners[c.Name()]; ok {
+		return fmt.Errorf("can't register cleaner %v: already exists", c.Name())
 	}
-
+	gf.cleaners[c.Name()] = c
 	return nil
 }
 
-func (gf *genericFramework) walk(ctx *types.Context, dir *data.Dir, isTop bool) func() {
+// RegisterPresetter implements Framework interface
+func (gf *genericFramework) RegisterPresetter(p preset.Presetter) error {
+	if _, ok := gf.presetters[p.Name()]; ok {
+		return fmt.Errorf("can't register presetter %v: already exists", p.Name())
+	}
+	gf.presetters[p.Name()] = p
+	return nil
+}
+
+func (gf *genericFramework) Run(t *testing.T) {
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	for _, r := range gf.dataDirs {
+		dir, err := data.Walk(r)
+		if err != nil {
+			t.Fatalf(err.Error())
+			return
+		}
+		ctx := &types.Context{}
+		f := gf.walk(ctx, dir)
+		ginkgo.Describe(dir.Context.Summary, f)
+	}
+	ginkgo.RunSpecs(t, "Test Suit")
+}
+
+func (gf *genericFramework) walk(ctx *types.Context, dir *data.Dir) func() {
 	dirs, files := dir.Dirs, dir.Files
 	ctxConfig := dir.Context
+	total := dir.CaseNum
 
 	return func() {
-		var contextVs map[string]template.Variable
-
-		ginkgo.BeforeEach(func() {
-			contextVs = ctx.Variables
-			ctx.Variables, ctx.Error = gf.constructContext(ctx, &ctxConfig)
-		})
-
-		ginkgo.AfterEach(func() {
-			if isTop {
-				gf.clearFn()
-				ctx.Variables = nil
-			} else {
-				ctx.Variables = contextVs
-			}
-			ctx.Error = nil
-		})
+		var curContext *types.Context
+		count := 0
+		lock := sync.Mutex{}
 
 		for name, d := range dirs {
-			f := gf.walk(ctx, &d, false)
+			f := gf.walk(ctx, &d)
 			summary := genSummary(name, d.Context.Summary)
 			ginkgo.Context(summary, f)
 		}
@@ -83,6 +99,35 @@ func (gf *genericFramework) walk(ctx *types.Context, dir *data.Dir, isTop bool) 
 			f := gf.itFunc(ctx, &c)
 			ginkgo.It(summary, f)
 		}
+
+		ginkgo.BeforeEach(func() {
+			lock.Lock()
+			defer lock.Unlock()
+			if count == 0 {
+				// construct context from context config file
+				gomega.Expect(gf.constructContext(ctx, &ctxConfig)).
+					NotTo(gomega.HaveOccurred())
+			} else {
+				gomega.Expect(gf.reconstructContext(ctx, &ctxConfig)).
+					NotTo(gomega.HaveOccurred())
+			}
+			curContext = saveContext(ctx)
+		})
+
+		ginkgo.AfterEach(func() {
+			// restore context
+			restoreContext(ctx, curContext)
+
+			lock.Lock()
+			defer lock.Unlock()
+			count++
+			if count == total {
+				cleaner, ok := gf.cleaners[ctx.CleanerName]
+				if ok {
+					gomega.Expect(cleaner.Clean(ctx.Variables)).NotTo(gomega.HaveOccurred())
+				}
+			}
+		})
 	}
 }
 
@@ -98,16 +143,13 @@ var (
 func (gf *genericFramework) itFunc(ctx *types.Context, file *data.File) func() {
 	c := file.Case
 	return func() {
-		ginkgo.By("Context should be constructed successfully")
-		gomega.Expect(ctx.Error).NotTo(gomega.HaveOccurred())
-
 		for _, rt := range c.Flow {
-			ginkgo.By(rt.Description)
-
-			respMatcher, err := roundtrip.MatchResponse(ctx, &rt)
+			nrt := roundtrip.MergeRoundTrip(ctx.RoundTripTemplate, &rt)
+			ginkgo.By(nrt.Description)
+			respMatcher, err := roundtrip.MatchResponse(ctx, nrt)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			if ev := rt.Response.Eventually; ev != nil {
+			if ev := nrt.Response.Eventually; ev != nil {
 				timeout := ev.Timeout
 				if timeout == nil {
 					timeout = &types.Duration{
@@ -121,13 +163,13 @@ func (gf *genericFramework) itFunc(ctx *types.Context, file *data.File) func() {
 					}
 				}
 				gomega.Eventually(func() *http.Response {
-					resp, err := gf.client.DoRequest(ctx, &rt)
+					resp, err := gf.client.DoRequest(ctx, nrt)
 					gomega.Expect(err).NotTo(gomega.HaveOccurred())
 					return resp
 				}, timeout.Duration, interval.Duration).Should(respMatcher)
 
 			} else {
-				resp, err := gf.client.DoRequest(ctx, &rt)
+				resp, err := gf.client.DoRequest(ctx, nrt)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				gomega.Expect(resp).To(respMatcher)
 			}
@@ -139,5 +181,4 @@ func (gf *genericFramework) itFunc(ctx *types.Context, file *data.File) func() {
 			}
 		}
 	}
-
 }

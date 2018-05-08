@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/caicloud/aloe/matcher"
-	"github.com/caicloud/aloe/template"
 	"github.com/caicloud/aloe/types"
 	"github.com/caicloud/aloe/utils/close"
 	"github.com/caicloud/aloe/utils/indent"
@@ -25,7 +24,7 @@ type ResponseHandler interface {
 	gomegatypes.GomegaMatcher
 
 	// Variables returns variables defined in the round trip
-	Variables() (map[string]template.Variable, error)
+	Variables() (map[string]jsonutil.Variable, error)
 }
 
 // ResponseMatcher defines a matcher to match http response
@@ -41,7 +40,7 @@ type ResponseMatcher struct {
 
 	parsed bool
 
-	vars map[string]template.Variable
+	vars map[string]jsonutil.Variable
 
 	failures []error
 }
@@ -76,7 +75,7 @@ func MatchResponse(ctx *types.Context, rt *types.RoundTrip) (ResponseHandler, er
 }
 
 // Variables returns variable of matcher
-func (m *ResponseMatcher) Variables() (map[string]template.Variable, error) {
+func (m *ResponseMatcher) Variables() (map[string]jsonutil.Variable, error) {
 	if !m.parsed {
 		return nil, fmt.Errorf("response should be matched before get variables")
 	}
@@ -131,15 +130,15 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 		return false, nil
 	}
 
-	m.vars = map[string]template.Variable{}
+	m.vars = map[string]jsonutil.Variable{}
 	isErr := false
 	for _, def := range m.defs {
-		v, err := jsonutil.GetVariable(body, &def)
+		v, err := jsonutil.GetVariable(body, def.Name, def.Selector...)
 		if err != nil {
 			m.failures = append(m.failures, err)
 			isErr = true
 		}
-		m.vars[def.Name] = *v
+		m.vars[def.Name] = v
 	}
 	if isErr {
 		return false, nil

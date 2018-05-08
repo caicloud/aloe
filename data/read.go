@@ -12,18 +12,28 @@ import (
 
 // Dir defines a directory to store test data
 type Dir struct {
+	// Context defines the context config
 	Context types.ContextConfig
 
+	// Name defines the dir name
 	Name string
 
-	Dirs  map[string]Dir
+	// CaseNum defines the case num under the dir
+	CaseNum int
+
+	// Dirs defines the children dirs
+	Dirs map[string]Dir
+
+	// Files defines the children files
 	Files map[string]File
 }
 
 // File defines a file to store a test case
 type File struct {
+	// Case defines the case config
 	Case types.Case
 
+	// Name defines the file name
 	Name string
 }
 
@@ -52,6 +62,7 @@ func Walk(path string) (*Dir, error) {
 				return nil, err
 			}
 			dir.Dirs[name] = *childDir
+			dir.CaseNum += childDir.CaseNum
 		} else if !isIgnored(name) {
 			c, err := readCase(childPath)
 			if err != nil {
@@ -61,6 +72,7 @@ func Walk(path string) (*Dir, error) {
 				Case: *c,
 				Name: file.Name(),
 			}
+			dir.CaseNum++
 		}
 	}
 	return &dir, nil
@@ -76,6 +88,9 @@ func readContext(dir string) (*types.ContextConfig, error) {
 	context := types.ContextConfig{}
 	if err := yaml.Unmarshal(contextBody, &context); err != nil {
 		return nil, fmt.Errorf("can't unmarshal %v, err: %v", contextFile, err)
+	}
+	if err := ValidateContext(&context); err != nil {
+		return nil, err
 	}
 	return &context, nil
 }
@@ -96,6 +111,9 @@ func readCase(file string) (*types.Case, error) {
 	}
 	c := types.Case{}
 	if err := yaml.Unmarshal(body, &c); err != nil {
+		return nil, err
+	}
+	if err := ValidateCase(&c); err != nil {
 		return nil, err
 	}
 	return &c, nil

@@ -1,0 +1,9 @@
+description: "Try verify nested context is clean"
+flow:
+- description: "Get product inited in _context.yaml"
+  request:
+    api: GET /products/10
+    headers:
+      "Content-Type": "application/json"
+  response:
+    statusCode: 404
