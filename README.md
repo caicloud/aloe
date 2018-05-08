@@ -74,30 +74,27 @@ flow:
 Finally, some go codes should be written in `test` directory to run the test case:
 
 ```go
-func TestAPI(t *testing.T) {
-	gomega.RegisterFailHandler(ginkgo.Fail)
-	f := aloe.NewFramework("localhost:8080", cleanUp,
+func RunTEST(t *testing.T) {
+	f := aloe.NewFramework("localhost:8080",
 		"testdata",
 	)
-	if err := f.Run(); err != nil {
-		fmt.Printf("can't run framework: %v", err)
+	if err := f.RegisterCleaner(s); err != nil {
+		fmt.Printf("can't register cleaner: %v", err)
 		os.Exit(1)
 	}
-	ginkgo.RunSpecs(t, "API Suite")
-}
-
-func cleanUp() {
-	// function to clean up context
-	// normally it is used to drop database
+	f.Run(t)
 }
 
 var _ = ginkgo.BeforeSuite(func() {
-	s := server.NewServer()
-	go http.ListenAndServe(":8080", s)
+	s.Register()
+	listener, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		fmt.Println("can't begin server")
+		os.Exit(1)
+	}
+	go http.Serve(listener, nil)
 })
 ```
-
-Pay attention to the `cleanUp` method, which is used to clean up a context.
 
 ## Usage
 
@@ -173,6 +170,70 @@ flow:
 ```
 
 Now only `$regexp` and `$exists` is supported (more special validator will be added in the future).
+
+### Cleaner
+
+Cleaner can be used to clean context after all cases in the context are finished.
+
+```go
+type Cleaner interface {
+	// Name defines cleaner name
+	Name() string
+
+	// Clean will be called after all of the cases in the context are
+	// finished
+	Clean(variables map[string]jsonutil.Variable) error
+}
+
+```
+
+Users can implement their own cleaners and call RegisterCleaner in framework.
+Then cleaners can be used in context file.
+
+```yaml
+# test/testdata/get.yaml
+summary: "Create a product"
+flow:
+- description: "Create a product"
+  request:
+    api: POST /products
+  response:
+    statusCode: 201
+cleaner: "productCleaner"
+```
+
+### Presetter
+
+Presetter can be used to preset all RoundTrips in the context.
+
+```go
+// Presetter defines presetter
+type Presetter interface {
+	// Name defines name of presetter
+	Name() string
+
+	// Preset parse args and set roundtrip template
+	Preset(rt *types.RoundTrip, args map[string]string) (*types.RoundTrip, error)
+}
+```
+
+Users can implement their own presetters and call RegisterPresetter in framework.
+Then presetters can be used in context file.
+
+```yaml
+# test/testdata/get.yaml
+summary: "Create a product"
+presetter:
+- name: "header"
+  args:
+    content-type: application/json
+flow:
+- description: "Create a product"
+  request:
+    api: POST /products
+  response:
+    statusCode: 201
+```
 
 ### Nested context
 

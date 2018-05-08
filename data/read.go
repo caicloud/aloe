@@ -15,7 +15,7 @@ type Dir struct {
 	// Context defines the context config
 	Context types.ContextConfig
 
-	// Name dfines the dir name
+	// Name defines the dir name
 	Name string
 
 	// CaseNum defines the case num under the dir
