@@ -20,5 +20,6 @@
   "Aggregate": true,
   "WarnUnmatchedNolint": true,
   "LineLength": 160,
-  "Skip": ["examples", "docs"]
+  "Skip": ["examples", "docs"],
+  "Deadline": "300s"
 }
