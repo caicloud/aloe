@@ -31,6 +31,12 @@ func MergeRoundTrip(origin *types.RoundTrip, patch *types.RoundTrip) *types.Roun
 	if patch.Response.StatusCode != 0 {
 		new.Response.StatusCode = patch.Response.StatusCode
 	}
+	if new.Response.Headers == nil {
+		new.Response.Headers = map[string]string{}
+	}
+	for k, v := range patch.Response.Headers {
+		new.Response.Headers[k] = v
+	}
 	if patch.Response.Body != nil {
 		new.Response.Body = patch.Response.Body
 	}
@@ -50,6 +56,11 @@ func CopyRoundTrip(origin *types.RoundTrip) *types.RoundTrip {
 	new.Request.Headers = map[string]string{}
 	for k, v := range origin.Request.Headers {
 		new.Request.Headers[k] = v
+	}
+
+	new.Response.Headers = map[string]string{}
+	for k, v := range origin.Response.Headers {
+		new.Response.Headers[k] = v
 	}
 
 	if origin.Response.Eventually != nil {
