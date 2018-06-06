@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/caicloud/aloe/utils/jsonutil"
+	"github.com/caicloud/aloe/runtime"
 	"github.com/emicklei/go-restful"
 )
 
@@ -26,12 +26,15 @@ func (s *ProductServer) Name() string {
 }
 
 // Clean implements cleaner.Cleaner
-func (s *ProductServer) Clean(vs map[string]jsonutil.Variable) error {
-	v, ok := vs["product"]
+func (s *ProductServer) Clean(template *runtime.RoundTripTemplate, args map[string]string) error {
+	if args == nil {
+		return fmt.Errorf("missing args")
+	}
+	v, ok := args["product"]
 	if !ok {
 		return fmt.Errorf("variable product is not registered")
 	}
-	delete(s.ps, v.String())
+	delete(s.ps, v)
 	return nil
 }
 
