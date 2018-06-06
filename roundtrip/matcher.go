@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/caicloud/aloe/matcher"
-	"github.com/caicloud/aloe/types"
+	"github.com/caicloud/aloe/runtime"
 	"github.com/caicloud/aloe/utils/close"
 	"github.com/caicloud/aloe/utils/indent"
 	"github.com/caicloud/aloe/utils/jsonutil"
@@ -24,7 +24,7 @@ type ResponseHandler interface {
 	gomegatypes.GomegaMatcher
 
 	// Variables returns variables defined in the round trip
-	Variables() (map[string]jsonutil.Variable, error)
+	Variables() map[string]jsonutil.Variable
 }
 
 // ResponseMatcher defines a matcher to match http response
@@ -38,7 +38,7 @@ type ResponseMatcher struct {
 
 	headers map[string]string
 
-	defs []types.Definition
+	defs []runtime.Definition
 
 	parsed bool
 
@@ -48,28 +48,26 @@ type ResponseMatcher struct {
 }
 
 // MatchResponse returns a response matcher
-func MatchResponse(ctx *types.Context, rt *types.RoundTrip) (ResponseHandler, error) {
-	respConf := rt.Response
+func MatchResponse(rt *runtime.RoundTrip) (ResponseHandler, error) {
+	if rt == nil {
+		return nil, fmt.Errorf("empty roundtrip")
+	}
+	resp := rt.Response
 	rm := &ResponseMatcher{
-		code:    respConf.StatusCode,
-		headers: respConf.Headers,
+		code:    resp.StatusCode,
+		headers: resp.Headers,
 		defs:    rt.Definitions,
 	}
-	if respConf.Body == nil {
+	if resp.Body == nil {
 		return rm, nil
-
-	}
-	matcherConf, err := respConf.Body.Render(ctx.Variables)
-	if err != nil {
-		return nil, err
 	}
 
-	if len(matcherConf) == 0 {
+	if len(resp.Body) == 0 {
 		rm.emptyBody = true
 		return rm, nil
 	}
 
-	m, err := matcher.Parse(matcherConf)
+	m, err := matcher.Parse(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("parse json error: %v", err)
 	}
@@ -78,18 +76,32 @@ func MatchResponse(ctx *types.Context, rt *types.RoundTrip) (ResponseHandler, er
 }
 
 // Variables returns variable of matcher
-func (m *ResponseMatcher) Variables() (map[string]jsonutil.Variable, error) {
+func (m *ResponseMatcher) Variables() map[string]jsonutil.Variable {
 	if !m.parsed {
-		return nil, fmt.Errorf("response should be matched before get variables")
+		return nil
 	}
-	return m.vars, nil
+	return m.vars
+}
+
+// Response used for match
+type Response struct {
+	Resp *http.Response
+	Err  error
 }
 
 // Match implements gomegatypes.GomegaMatcher
 func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
-	resp, ok := actual.(*http.Response)
-	if !ok {
-		return false, fmt.Errorf("%v is type %T, expected response", actual, actual)
+	var resp *http.Response
+	switch obj := actual.(type) {
+	case *http.Response:
+		resp = obj
+	case *Response:
+		if obj.Err != nil {
+			return false, obj.Err
+		}
+		resp = obj.Resp
+	default:
+		return false, fmt.Errorf("%v is type %T, expected *http.Response or *roundtrip.Response", actual, actual)
 	}
 	defer close.Close(resp.Body)
 

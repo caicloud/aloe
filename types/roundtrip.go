@@ -25,13 +25,20 @@ type RoundTrip struct {
 
 // Request defines a part template of http request
 type Request struct {
+	// Host defines request host
+	Host string `json:"host"`
+
+	// Scheme defines request scheme
+	// Default is http
+	Scheme string `json:"scheme"`
+
 	// API is a http verb + http path
 	// e.g GET /api/v1/users
 	API *Template `json:"api"`
 
 	// Headers defines http header of request
 	// NOTE(liubog2008): whether to use map[string][]string
-	Headers map[string]string `json:"headers,omitempty"`
+	Headers map[string]Template `json:"headers,omitempty"`
 
 	// Body defines a template with variable
 	Body *Template `json:"body,omitempty"`
@@ -44,7 +51,7 @@ type Response struct {
 
 	// Headers defines http header of request
 	// NOTE(liubog2008): whether to use map[string][]string
-	Headers map[string]string `json:"headers,omitempty"`
+	Headers map[string]Template `json:"headers,omitempty"`
 
 	// Body is also a template like request body
 	// It can be used to generate a matcher which
@@ -62,7 +69,7 @@ type Definition struct {
 	Name string `json:"name"`
 
 	// Selector select variable value from response
-	Selector []string `json:"selector"`
+	Selector []Template `json:"selector"`
 }
 
 // Template is used to get template from json

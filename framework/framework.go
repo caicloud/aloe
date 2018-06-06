@@ -1,43 +1,52 @@
-package aloe
+package framework
 
 import (
 	"fmt"
-	"net/http"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/caicloud/aloe/cleaner"
 	"github.com/caicloud/aloe/data"
 	"github.com/caicloud/aloe/preset"
 	"github.com/caicloud/aloe/roundtrip"
-	"github.com/caicloud/aloe/types"
+	"github.com/caicloud/aloe/runtime"
+	"github.com/caicloud/aloe/utils/jsonutil"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 )
 
 // Framework defines an API test framework
 type Framework interface {
+	// Env sets the envirment context
+	Env(key, value string) error
+
+	// AppendDataDirs add data into framework
+	AppendDataDirs(dataDirs ...string)
+
 	// RegisterCleaner registers cleaner of framework
 	RegisterCleaner(cs ...cleaner.Cleaner) error
+
 	// RegisterPresetter registers presetter of framework
 	RegisterPresetter(ps ...preset.Presetter) error
+
 	// Run will run the framework
 	Run(t *testing.T)
 }
 
 // NewFramework returns an API test framework
-func NewFramework(host string, dataDirs ...string) Framework {
+func NewFramework(dataDirs ...string) Framework {
 	reqHeader := preset.NewHeaderPresetter(preset.RequestType)
 	respHeader := preset.NewHeaderPresetter(preset.ResponseType)
+	host := preset.NewHostPresetter()
 	return &genericFramework{
 		dataDirs: dataDirs,
-		client:   roundtrip.NewClient(host),
+		client:   roundtrip.NewClient(),
 		cleaners: map[string]cleaner.Cleaner{},
 		presetters: map[string]preset.Presetter{
 			reqHeader.Name():  reqHeader,
 			respHeader.Name(): respHeader,
+			host.Name():       host,
 		},
+		adam: &runtime.Context{},
 	}
 }
 
@@ -49,6 +58,25 @@ type genericFramework struct {
 	cleaners map[string]cleaner.Cleaner
 
 	presetters map[string]preset.Presetter
+
+	adam *runtime.Context
+}
+
+// Env implements Framework interface
+func (gf *genericFramework) Env(key, value string) error {
+	if gf.adam.Variables == nil {
+		gf.adam.Variables = map[string]jsonutil.Variable{}
+	}
+	if _, ok := gf.adam.Variables[key]; ok {
+		return fmt.Errorf("%v has been defined", key)
+	}
+	gf.adam.Variables[key] = jsonutil.NewVariable(key, value)
+	return nil
+}
+
+// AppendDataDirs implements Framework interface
+func (gf *genericFramework) AppendDataDirs(ds ...string) {
+	gf.dataDirs = append(gf.dataDirs, ds...)
 }
 
 // RegisterCleaner implements Framework interface
@@ -81,60 +109,66 @@ func (gf *genericFramework) Run(t *testing.T) {
 			t.Fatalf(err.Error())
 			return
 		}
-		ctx := &types.Context{}
-		f := gf.walk(ctx, dir)
+		f := gf.walk(gf.adam, dir)
 		ginkgo.Describe(dir.Context.Summary, f)
 	}
 	ginkgo.RunSpecs(t, "Test Suit")
 }
 
-func (gf *genericFramework) walk(ctx *types.Context, dir *data.Dir) func() {
+func (gf *genericFramework) walk(parent *runtime.Context, dir *data.Dir) func() {
 	dirs, files := dir.Dirs, dir.Files
 	ctxConfig := dir.Context
 	total := dir.CaseNum
 
 	return func() {
-		var curContext *types.Context
+		// TODO(liubog2008): need to support concurrency
 		count := 0
-		lock := sync.Mutex{}
+
+		var ctx runtime.Context
 
 		for name, d := range dirs {
-			f := gf.walk(ctx, &d)
+			f := gf.walk(&ctx, &d)
 			summary := genSummary(name, d.Context.Summary)
 			ginkgo.Context(summary, f)
 		}
 		for name, c := range files {
-			summary := genSummary(name, c.Case.Description)
-			f := gf.itFunc(ctx, &c)
+			summary := genSummary(name, c.Case.Summary)
+			f := gf.itFunc(&ctx, &c)
 			ginkgo.It(summary, f)
 		}
 
 		ginkgo.BeforeEach(func() {
-			lock.Lock()
-			defer lock.Unlock()
+			// inherit parent context
+			runtime.CopyContext(&ctx, parent)
+
+			// render preset config
+			gomega.Expect(runtime.RenderPresetters(&ctx, ctxConfig.Presetters)).
+				NotTo(gomega.HaveOccurred())
+
+			gomega.Expect(gf.constructRoundTripTemplate(&ctx)).
+				NotTo(gomega.HaveOccurred())
+
 			if count == 0 {
-				// construct context from context config file
-				gomega.Expect(gf.constructContext(ctx, &ctxConfig)).
-					NotTo(gomega.HaveOccurred())
-			} else {
-				gomega.Expect(gf.reconstructContext(ctx, &ctxConfig)).
-					NotTo(gomega.HaveOccurred())
+				gf.constructFlow(&ctx, ctxConfig.Flow)
 			}
-			curContext = saveContext(ctx)
+			gf.constructValidatedFlow(&ctx, ctxConfig.ValidatedFlow)
+
 		})
 
 		ginkgo.AfterEach(func() {
-			// restore context
-			restoreContext(ctx, curContext)
+			// render cleaner config
+			gomega.Expect(runtime.RenderCleaners(&ctx, ctxConfig.Cleaners)).
+				NotTo(gomega.HaveOccurred())
 
-			lock.Lock()
-			defer lock.Unlock()
 			count++
-			if count == total {
-				cleaner, ok := gf.cleaners[ctx.CleanerName]
-				if ok {
-					gomega.Expect(cleaner.Clean(ctx.Variables)).NotTo(gomega.HaveOccurred())
+			for _, c := range ctx.Cleaners {
+				if !c.ForEach && count != total {
+					continue
 				}
+				cleaner, ok := gf.cleaners[c.Name]
+				gomega.Expect(ok).To(gomega.BeTrue())
+				gomega.Expect(cleaner.Clean(ctx.RoundTripTemplate, c.Args)).
+					NotTo(gomega.HaveOccurred())
 			}
 		})
 	}
@@ -144,50 +178,11 @@ func genSummary(name, summary string) string {
 	return name + ": " + summary
 }
 
-var (
-	defaultTimeout  = 1 * time.Second
-	defaultInterval = 100 * time.Millisecond
-)
-
-func (gf *genericFramework) itFunc(ctx *types.Context, file *data.File) func() {
+func (gf *genericFramework) itFunc(ctx *runtime.Context, file *data.File) func() {
 	c := file.Case
 	return func() {
 		for _, rt := range c.Flow {
-			nrt := roundtrip.MergeRoundTrip(ctx.RoundTripTemplate, &rt)
-			ginkgo.By(nrt.Description)
-			respMatcher, err := roundtrip.MatchResponse(ctx, nrt)
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-			if ev := nrt.Response.Eventually; ev != nil {
-				timeout := ev.Timeout
-				if timeout == nil {
-					timeout = &types.Duration{
-						Duration: defaultTimeout,
-					}
-				}
-				interval := ev.Interval
-				if interval == nil {
-					interval = &types.Duration{
-						Duration: defaultInterval,
-					}
-				}
-				gomega.Eventually(func() *http.Response {
-					resp, err := gf.client.DoRequest(ctx, nrt)
-					gomega.Expect(err).NotTo(gomega.HaveOccurred())
-					return resp
-				}, timeout.Duration, interval.Duration).Should(respMatcher)
-
-			} else {
-				resp, err := gf.client.DoRequest(ctx, nrt)
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				gomega.Expect(resp).To(respMatcher)
-			}
-			vs, err := respMatcher.Variables()
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-			for k, v := range vs {
-				ctx.Variables[k] = v
-			}
+			gf.roundTrip(ctx, &rt, true)
 		}
 	}
 }

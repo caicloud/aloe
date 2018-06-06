@@ -3,7 +3,7 @@ package preset
 import (
 	"net/http"
 
-	"github.com/caicloud/aloe/types"
+	"github.com/caicloud/aloe/runtime"
 )
 
 const (
@@ -30,9 +30,9 @@ func (p *headerPresetter) Name() string {
 }
 
 // Preset implements preset.Presetter
-func (p *headerPresetter) Preset(rt *types.RoundTrip, args map[string]string) (*types.RoundTrip, error) {
+func (p *headerPresetter) Preset(rt *runtime.RoundTripTemplate, args map[string]string) (*runtime.RoundTripTemplate, error) {
 	if rt == nil {
-		rt = &types.RoundTrip{}
+		rt = &runtime.RoundTripTemplate{}
 	}
 
 	if p.typ == RequestType {

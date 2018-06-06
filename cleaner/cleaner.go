@@ -1,6 +1,6 @@
 package cleaner
 
-import "github.com/caicloud/aloe/utils/jsonutil"
+import "github.com/caicloud/aloe/runtime"
 
 // Cleaner defines custom cleaner which can clean up context
 // It is a callback hook called when all cases in context are finished
@@ -12,9 +12,5 @@ type Cleaner interface {
 
 	// Clean will be called after all of the cases in the context are
 	// finished
-	Clean(variables map[string]jsonutil.Variable) error
-
-	// ForceClean will be called if function clean failed
-	// If ForceClean returns false, test case will fail
-	// ForceClean(variables map[string]jsonutil.Variable) bool
+	Clean(template *runtime.RoundTripTemplate, args map[string]string) error
 }

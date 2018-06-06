@@ -142,3 +142,31 @@ var bitSizes = map[reflect.Kind]int{
 
 	reflect.Uintptr: 64,
 }
+
+type stringVar struct {
+	name  string
+	value string
+}
+
+// Name implements Variable interface
+func (v *stringVar) Name() string {
+	return v.name
+}
+
+// String implements Variable interface
+func (v *stringVar) String() string {
+	return v.value
+}
+
+// Unmarshal implements Variable interface
+func (v *stringVar) Unmarshal(obj interface{}) error {
+	return fmt.Errorf("Not Supported")
+}
+
+// NewVariable returns a variable with value s
+func NewVariable(name, value string) Variable {
+	return &stringVar{
+		name:  name,
+		value: value,
+	}
+}

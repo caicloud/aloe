@@ -6,5 +6,5 @@ type PresetConfig struct {
 	Name string `json:"name"`
 
 	// Args defines preset args
-	Args map[string]string `json:"args,omitempty"`
+	Args map[string]Template `json:"args,omitempty"`
 }
