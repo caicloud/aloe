@@ -21,5 +21,6 @@
   "WarnUnmatchedNolint": true,
   "LineLength": 160,
   "Skip": ["examples", "docs"],
-  "Deadline": "300s"
+  "Deadline": "300s",
+  "Concurrency": 1
 }
