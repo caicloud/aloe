@@ -1,6 +1,6 @@
-description: "Try get a product in nested context"
+summary: "Try get a product in nested context"
 flow:
-- description: "Get product inited in _context.yaml"
+- description: "Get product inited in context.yaml"
   request:
     api: GET /products/%{product}
     headers:

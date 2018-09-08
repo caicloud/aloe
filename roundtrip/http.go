@@ -2,63 +2,44 @@ package roundtrip
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
-	"github.com/caicloud/aloe/types"
+	"github.com/caicloud/aloe/runtime"
 )
 
 // Client defines client which can run round-trip of API test
 type Client struct {
-	c    *http.Client
-	host string
+	c *http.Client
 }
 
 // NewClient returns a client for roundtrip
-func NewClient(host string) *Client {
+func NewClient() *Client {
 	return &Client{
-		c:    http.DefaultClient,
-		host: host,
+		c: http.DefaultClient,
 	}
 }
 
-func splitMethodAndPath(api string) (string, string) {
-	s := strings.Split(api, " ")
-	if len(s) != 2 {
-		return "", ""
+func (c *Client) getURL(req *runtime.Request) string {
+	scheme := "http://"
+	if req.Scheme != "" {
+		scheme = req.Scheme + "://"
 	}
-	return s[0], s[1]
+	return scheme + req.Host + req.Path
 }
 
 // DoRequest runs a round-trip of http
-func (c *Client) DoRequest(ctx *types.Context, rt *types.RoundTrip) (*http.Response, error) {
-	return c.doRequest(ctx, &rt.Request)
+func (c *Client) DoRequest(rt *runtime.RoundTrip) (*http.Response, error) {
+	return c.doRequest(&rt.Request)
 }
 
-func (c *Client) doRequest(ctx *types.Context, reqConf *types.Request) (*http.Response, error) {
-	if reqConf.API == nil {
-		return nil, fmt.Errorf("api can not be empty")
-	}
-
-	api, err := reqConf.API.Render(ctx.Variables)
-	if err != nil {
-		return nil, err
-	}
-
-	method, path := splitMethodAndPath(api)
-
+func (c *Client) doRequest(reqConf *runtime.Request) (*http.Response, error) {
 	var body io.Reader
 	if reqConf.Body != nil {
-		rendered, err := reqConf.Body.Render(ctx.Variables)
-		if err != nil {
-			return nil, err
-		}
-		body = bytes.NewBufferString(rendered)
+		body = bytes.NewBuffer(reqConf.Body)
 	}
 
-	req, err := http.NewRequest(method, "http://"+c.host+path, body)
+	req, err := http.NewRequest(reqConf.Method, c.getURL(reqConf), body)
 	if err != nil {
 		return nil, err
 	}

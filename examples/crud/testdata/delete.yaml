@@ -1,4 +1,4 @@
-description: "Try delete a product"
+summary: "Try delete a product"
 flow:
 - description: "delete a product"
   request:

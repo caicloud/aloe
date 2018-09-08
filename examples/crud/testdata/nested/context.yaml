@@ -16,4 +16,7 @@ flow:
   - name: "product"
     selector:
     - "id"
-cleaner: "product"
+cleaners:
+- name: "product"
+  args:
+    product: "%{product}"

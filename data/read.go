@@ -13,7 +13,7 @@ import (
 // Dir defines a directory to store test data
 type Dir struct {
 	// Context defines the context config
-	Context types.ContextConfig
+	Context types.Context
 
 	// Name defines the dir name
 	Name string
@@ -78,14 +78,14 @@ func Walk(path string) (*Dir, error) {
 	return &dir, nil
 }
 
-func readContext(dir string) (*types.ContextConfig, error) {
+func readContext(dir string) (*types.Context, error) {
 	contextFile := filepath.Join(dir, types.ContextFile)
 
 	contextBody, err := ioutil.ReadFile(contextFile)
 	if err != nil {
 		return nil, err
 	}
-	context := types.ContextConfig{}
+	context := types.Context{}
 	if err := yaml.Unmarshal(contextBody, &context); err != nil {
 		return nil, fmt.Errorf("can't unmarshal %v, err: %v", contextFile, err)
 	}

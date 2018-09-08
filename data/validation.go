@@ -21,11 +21,17 @@ func (el ErrorList) Error() string {
 
 // ValidateCase will validate case before case is running
 func ValidateCase(c *types.Case) error {
+	if c == nil {
+		return fmt.Errorf("case is empty")
+	}
 	return nil
 }
 
 // ValidateContext will validate context before case is running
-func ValidateContext(c *types.ContextConfig) error {
+func ValidateContext(c *types.Context) error {
+	if c == nil {
+		return fmt.Errorf("context is empty")
+	}
 	errList := ErrorList{}
 	for _, rt := range c.ValidatedFlow {
 		if len(rt.Constructor) == 0 || len(rt.Validator) == 0 {

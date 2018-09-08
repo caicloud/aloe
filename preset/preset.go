@@ -1,6 +1,6 @@
 package preset
 
-import "github.com/caicloud/aloe/types"
+import "github.com/caicloud/aloe/runtime"
 
 // Presetter defines presetter
 type Presetter interface {
@@ -8,6 +8,5 @@ type Presetter interface {
 	Name() string
 
 	// Preset parse args and set roundtrip template
-	// TODO(liubog2008): define a round trip template type
-	Preset(rt *types.RoundTrip, args map[string]string) (*types.RoundTrip, error)
+	Preset(rt *runtime.RoundTripTemplate, args map[string]string) (*runtime.RoundTripTemplate, error)
 }
