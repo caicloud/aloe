@@ -8,7 +8,6 @@
     "goconst",
     "goimports",
     "varcheck",
-    "gas",
     "megacheck",
     "lll",
     "unconvert",
