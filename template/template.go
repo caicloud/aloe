@@ -1,7 +1,6 @@
 package template
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/caicloud/aloe/utils/jsonutil"
@@ -15,64 +14,73 @@ type Template interface {
 
 // Template defines template of request
 type template struct {
-	varNames []string
-	snippts  []string
+	identitors map[int]identitor
+	snippets   []string
+	args       map[int][]identitor
+}
+
+type identitor struct {
+	name  string
+	isVar bool
 }
 
 func (t *template) fromRaw(raw string) error {
-	t.varNames = nil
-	t.snippts = nil
-	snippt, varName := "", ""
-	isVariable, isOpen := false, false
+	lexer := NewLexer([]rune(raw))
 
-	for _, r := range raw {
-		switch r {
-		case '%':
-			if isOpen || isVariable {
-				snippt += "%"
-			}
-			isVariable = !isVariable
-		case '{':
-			if !isVariable {
-				snippt += "{"
-			} else {
-				isVariable = false
-				isOpen = true
-				t.snippts = append(t.snippts, snippt)
-				snippt = ""
-			}
-		case '}':
-			if isOpen {
-				isOpen = false
-				if varName == "" {
-					return errors.New("Param name should not be empty")
+	var args []identitor
+	var funcName string
+	for !lexer.IsEnd() {
+		token, tokenType, err := lexer.NextToken()
+		if err != nil {
+			return err
+		}
+		switch tokenType {
+		case TextToken:
+			if funcName != "" {
+				t.identitors[len(t.snippets)] = identitor{
+					name:  funcName,
+					isVar: false,
 				}
-				t.varNames = append(t.varNames, varName)
-				varName = ""
-			} else {
-				snippt += "}"
+				t.args[len(t.snippets)] = args
+				funcName = ""
+				args = nil
 			}
-		default:
-			if isVariable {
-				return errors.New("Only %% or %{} is allowed")
+			t.snippets = append(t.snippets, string(token))
+		case VariableNameToken:
+			t.identitors[len(t.snippets)] = identitor{
+				name:  string(token),
+				isVar: true,
 			}
-			if isOpen {
-				varName += string(r)
-			} else {
-				snippt += string(r)
-			}
+		case FuncNameToken:
+			funcName = string(token)
+		case ArgToken:
+			args = append(args, identitor{
+				name:  string(token),
+				isVar: false,
+			})
+		case ArgVariableToken:
+			args = append(args, identitor{
+				name:  string(token),
+				isVar: true,
+			})
 		}
 	}
-	if isVariable || isOpen {
-		return errors.New("Single '%' or unclosed '%{'")
+	if funcName != "" {
+		t.identitors[len(t.snippets)] = identitor{
+			name:  funcName,
+			isVar: false,
+		}
+		t.args[len(t.snippets)] = args
 	}
-	t.snippts = append(t.snippts, snippt)
 	return nil
 }
 
 // New returns raw string to template
 func New(raw string) (Template, error) {
-	t := template{}
+	t := template{
+		identitors: map[int]identitor{},
+		args:       map[int][]identitor{},
+	}
 	if err := t.fromRaw(raw); err != nil {
 		return nil, err
 	}
@@ -100,14 +108,54 @@ func New(raw string) (Template, error) {
 // %%{string} => %{string}
 func (t *template) Render(vs map[string]jsonutil.Variable) (string, error) {
 	out := ""
-	for i, varName := range t.varNames {
-		out += t.snippts[i]
-		v, ok := vs[varName]
+	for i, snippet := range t.snippets {
+		identitor, ok := t.identitors[i]
 		if !ok {
-			return "", fmt.Errorf("can't find variable %v", varName)
+			out += snippet
+			continue
 		}
-		out += v.String()
+		str, err := t.renderScript(&identitor, i, vs)
+		if err != nil {
+			return "", err
+		}
+		out += str
+		out += snippet
 	}
-	out += t.snippts[len(t.snippts)-1]
+	index := len(t.snippets)
+	identitor, ok := t.identitors[index]
+	if !ok {
+		return out, nil
+	}
+	str, err := t.renderScript(&identitor, index, vs)
+	if err != nil {
+		return "", err
+	}
+	out += str
+
 	return out, nil
+}
+
+func (t *template) renderScript(ident *identitor, index int, vs map[string]jsonutil.Variable) (string, error) {
+	if ident.isVar {
+		v, ok := vs[ident.name]
+		if !ok {
+			return "", fmt.Errorf("can't find variable %v", ident.name)
+		}
+		return v.String(), nil
+	}
+	args := t.args[index]
+	funcArgs := []string{}
+	for _, arg := range args {
+		if arg.isVar {
+			v, ok := vs[arg.name]
+			if !ok {
+				return "", fmt.Errorf("can't find variable %v", arg.name)
+			}
+			funcArgs = append(funcArgs, v.String())
+		} else {
+			funcArgs = append(funcArgs, arg.name)
+		}
+
+	}
+	return Call(ident.name, funcArgs...)
 }

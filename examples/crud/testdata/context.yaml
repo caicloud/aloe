@@ -8,7 +8,7 @@ presetters:
     host: "%{host}"
 validatedFlow:
 - constructor:
-  - description: "Create a product"
+  - description: "Init a product"
     request:
       api: POST /products
       body: |
