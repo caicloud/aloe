@@ -7,11 +7,15 @@ import (
 )
 
 var (
-	UnclosedScriptError      = errors.New("unclosed script, missing '}'")
-	UnrecognizedToken        = errors.New("only %% and %{ is allowed")
-	UnclosedParenthesisError = errors.New("unclosed parenthesis, missing ')'")
+	// ErrUnclosedScript defines missing '}' error
+	ErrUnclosedScript = errors.New("unclosed script, missing '}'")
+	// ErrUnrecognizedToken defines unreognized token error
+	ErrUnrecognizedToken = errors.New("only %% and %{ is allowed")
+	// ErrUnclosedParenthesis defines missing ')' error
+	ErrUnclosedParenthesis = errors.New("unclosed parenthesis, missing ')'")
 )
 
+// Lexer is lexer for template
 type Lexer struct {
 	buf []rune
 
@@ -24,15 +28,22 @@ type Lexer struct {
 type Token int
 
 const (
+	// VariableNameToken defines variable name token
 	VariableNameToken Token = iota
+	// FuncNameToken defines func name token
 	FuncNameToken
+	// ArgToken defines function arg token
 	ArgToken
+	// ArgVariableToken defines function arg variable name token
 	ArgVariableToken
+	// TextToken defines normal text token
 	TextToken
 
+	// UnknownToken defines token unknown
 	UnknownToken
 )
 
+// NewLexer new a lexer for raw
 func NewLexer(raw []rune) *Lexer {
 	return &Lexer{
 		buf:    raw,
@@ -40,6 +51,7 @@ func NewLexer(raw []rune) *Lexer {
 	}
 }
 
+// IsEnd judge whether lexer is end
 func (lr *Lexer) IsEnd() bool {
 	if lr.offset == len(lr.buf) && lr.normal {
 		return true
@@ -60,47 +72,6 @@ func (lr *Lexer) top() (rune, bool) {
 	return 0, false
 }
 
-func (lr *Lexer) peek() (rune, bool) {
-	b, ok := lr.top()
-	if !ok {
-		return 0, false
-	}
-	lr.offset++
-	return b, true
-}
-
-// peekNext try to peek bs and return whether bs are successfully peeked
-// if skipSpace, spaces can be skipped if they are before bs
-func (lr *Lexer) peekNext(bs []rune, skipSpace bool) bool {
-	if len(lr.buf[lr.offset:]) < len(bs) {
-		return false
-	}
-	hasSkipped, index, skipOff := !skipSpace, 0, 0
-	for _, c := range lr.buf[lr.offset:] {
-		skipOff++
-		switch c {
-		case ' ', '\n', '\r', '\t':
-			if skipSpace && !hasSkipped {
-				continue
-			}
-		default:
-			// set non-space flag
-			hasSkipped = true
-		}
-		if bs[index] != c {
-			return false
-		}
-		if hasSkipped {
-			index++
-		}
-		if index >= len(bs) {
-			break
-		}
-	}
-	lr.offset += skipOff
-	return true
-}
-
 func (lr *Lexer) readUntil(delim rune) ([]rune, bool) {
 	bs := []rune{}
 	for _, c := range lr.buf[lr.offset:] {
@@ -113,6 +84,7 @@ func (lr *Lexer) readUntil(delim rune) ([]rune, bool) {
 	return bs, false
 }
 
+// NextToken returns next token of the template
 func (lr *Lexer) NextToken() ([]rune, Token, error) {
 	if lr.normal {
 		text, err := lr.nextTextToken()
@@ -123,14 +95,14 @@ func (lr *Lexer) NextToken() ([]rune, Token, error) {
 	}
 	b, ok := lr.top()
 	if !ok {
-		return nil, UnknownToken, UnclosedScriptError
+		return nil, UnknownToken, ErrUnclosedScript
 	}
 	switch b {
 	case '(', ',':
 		lr.offset++
 		b, ok := lr.top()
 		if !ok {
-			return nil, UnknownToken, UnclosedParenthesisError
+			return nil, UnknownToken, ErrUnclosedParenthesis
 		}
 		if b == ')' {
 			return lr.NextToken()
@@ -140,7 +112,7 @@ func (lr *Lexer) NextToken() ([]rune, Token, error) {
 		lr.offset++
 		next, ok := lr.top()
 		if !ok || next != '}' {
-			return nil, UnknownToken, UnclosedScriptError
+			return nil, UnknownToken, ErrUnclosedScript
 		}
 		lr.offset++
 		lr.normal = true
@@ -152,7 +124,7 @@ func (lr *Lexer) NextToken() ([]rune, Token, error) {
 		}
 		b, ok := lr.top()
 		if !ok {
-			return nil, UnknownToken, UnclosedScriptError
+			return nil, UnknownToken, ErrUnclosedScript
 		}
 		if b == '}' {
 			lr.offset++
@@ -169,7 +141,7 @@ func (lr *Lexer) NextToken() ([]rune, Token, error) {
 // others: error will be returned
 func (lr *Lexer) tryReadBeginToken() ([]rune, bool, error) {
 	if len(lr.buf) == lr.offset+1 {
-		return nil, false, UnrecognizedToken
+		return nil, false, ErrUnrecognizedToken
 	}
 	switch lr.buf[lr.offset+1] {
 	case '%':
@@ -180,7 +152,7 @@ func (lr *Lexer) tryReadBeginToken() ([]rune, bool, error) {
 		lr.offset = lr.offset + 2
 		return nil, true, nil
 	default:
-		return nil, false, UnrecognizedToken
+		return nil, false, ErrUnrecognizedToken
 	}
 
 }
@@ -208,7 +180,7 @@ func (lr *Lexer) nextTextToken() ([]rune, error) {
 func (lr *Lexer) nextArg() ([]rune, Token, error) {
 	b, ok := lr.top()
 	if !ok {
-		return nil, UnknownToken, UnclosedParenthesisError
+		return nil, UnknownToken, ErrUnclosedParenthesis
 	}
 	switch b {
 	case '`':

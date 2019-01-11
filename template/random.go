@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	// Random defines random function
 	Random = "random"
 )
 

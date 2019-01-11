@@ -2,6 +2,7 @@ package template
 
 import "fmt"
 
+// Call calls function of template
 func Call(name string, args ...string) (string, error) {
 	switch name {
 	case Random:
