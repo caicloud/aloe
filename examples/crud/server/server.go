@@ -44,6 +44,16 @@ type Product struct {
 	Title string `json:"title"`
 }
 
+func (s *ProductServer) list(req *restful.Request, resp *restful.Response) {
+	ps := []Product{}
+	for _, p := range s.ps {
+		ps = append(ps, p)
+	}
+	if err := resp.WriteEntity(ps); err != nil {
+		log.Printf("response error: %v", err)
+	}
+}
+
 func (s *ProductServer) get(req *restful.Request, resp *restful.Response) {
 	id := req.PathParameter("id")
 	p, ok := s.ps[id]
@@ -101,6 +111,9 @@ func (s *ProductServer) Register() {
 	ws.Path("/products")
 	ws.Consumes(restful.MIME_JSON)
 	ws.Produces(restful.MIME_JSON)
+
+	ws.Route(ws.GET("").To(s.list).
+		Doc("list all products"))
 
 	ws.Route(ws.GET("/{id}").To(s.get).
 		Doc("get the product by its id").
