@@ -192,6 +192,7 @@ func renderHeader(ctx *Context, current map[string]string, headers map[string]ty
 	return nil
 }
 
+// RenderWhen will render condition config into runtime condition
 func RenderWhen(ctx *Context, whenConf *types.When) (*When, error) {
 	if whenConf == nil {
 		return nil, nil

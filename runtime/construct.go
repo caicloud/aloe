@@ -15,6 +15,13 @@ func CopyContext(dest, src *Context) {
 	dest.Cleaners = nil
 }
 
+// ReconstructChildContext will reconstruct context
+// from parent and previous variable patch
+// for {
+//   child = parent + prevPatch
+//   patch = roundTrip(child)
+//   prevPatch = patch
+// }
 func ReconstructChildContext(dst *Context, parent *Context, patch jsonutil.VariableMap) error {
 	vs, err := jsonutil.Merge(parent.Variables, jsonutil.ConflictOption, true, patch)
 	if err != nil {

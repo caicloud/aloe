@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// MergeOption defines option of merge function
 type MergeOption int
 
 const (
@@ -11,10 +12,11 @@ const (
 	CombineOption MergeOption = iota
 	// OverwriteOption will let variable replace the before one
 	OverwriteOption
-	// ConflictOption will return error if conflict occured
+	// ConflictOption will return error if conflict occurred
 	ConflictOption
 )
 
+// Merge merges VariableMaps objs into VariableMap dst by differernt options
 func Merge(dst VariableMap, opt MergeOption, isNew bool, objs ...VariableMap) (VariableMap, error) {
 	vs := dst
 	if isNew {
@@ -51,6 +53,7 @@ func Merge(dst VariableMap, opt MergeOption, isNew bool, objs ...VariableMap) (V
 	return vs, nil
 }
 
+// IsConflict check whether objs are conflict with dst
 func IsConflict(dst VariableMap, objs ...VariableMap) bool {
 	for _, obj := range objs {
 		for k := range obj.to() {

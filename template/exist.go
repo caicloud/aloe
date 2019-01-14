@@ -1,6 +1,8 @@
 package template
 
 const (
+	// Exist defines exist function
+	// It checks whether argument exists
 	Exist = "exist"
 )
 

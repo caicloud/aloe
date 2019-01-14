@@ -4,11 +4,15 @@ import (
 	"time"
 )
 
+// DefinitionType defines whether definition is from
 type DefinitionType string
 
 const (
-	BodyType   DefinitionType = "body"
+	// BodyType means definition from body
+	BodyType DefinitionType = "body"
+	// HeaderType means definition from header
 	HeaderType DefinitionType = "header"
+	// StatusType means definition from status
 	StatusType DefinitionType = "status"
 )
 

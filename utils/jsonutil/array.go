@@ -5,12 +5,18 @@ import (
 	"strconv"
 )
 
+// VariableArray defines array variable
 type VariableArray interface {
+	// Variable is Variable interface
 	Variable
 
+	// Append append Variable into array
 	Append(v Variable)
+	// Len returns array length
 	Len() int
+	// Get gets Variable from array
 	Get(i int) (Variable, bool)
+	// Slice returns slice from array
 	Slice(i, k int) (VariableArray, error)
 }
 
@@ -79,6 +85,7 @@ func (arr *varArray) Slice(i, k int) (VariableArray, error) {
 	return arr, nil
 }
 
+// NewVariableArray returns array variable
 func NewVariableArray(name string, vs []Variable) VariableArray {
 	return &varArray{
 		name: name,

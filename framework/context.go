@@ -14,9 +14,11 @@ import (
 )
 
 const (
+	// IteratorName defines iterator variable name
 	IteratorName = "iterator"
 )
 
+// Iterate set iterator variable in context variable
 func Iterate(ctx *runtime.Context, iter int) {
 	ctx.Variables.Set(IteratorName, jsonutil.NewIntVariable(IteratorName, iter))
 }

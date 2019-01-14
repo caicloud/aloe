@@ -40,7 +40,6 @@ type Variable interface {
 	Unmarshal(obj interface{}) error
 	// String will returns the string value
 	String() string
-
 	// Select get subpath of variable
 	Select(selector ...string) (Variable, error)
 }
@@ -182,7 +181,7 @@ func (v *stringVar) Select(selector ...string) (Variable, error) {
 	return nil, fmt.Errorf("can't select from json(%v) by selector %v", v, selector)
 }
 
-// NewVariable returns a variable with value s
+// NewStringVariable returns a variable with value s
 func NewStringVariable(name, value string) Variable {
 	return &stringVar{
 		name:  name,
@@ -210,6 +209,7 @@ func (v *intVar) Unmarshal(obj interface{}) error {
 	return fmt.Errorf("Not Supported")
 }
 
+// Select implements Variable interface
 func (v *intVar) Select(selector ...string) (Variable, error) {
 	if len(selector) == 0 {
 		return v, nil
