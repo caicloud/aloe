@@ -6,77 +6,203 @@ import (
 
 	"github.com/caicloud/aloe/utils/jsonutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNew(t *testing.T) {
 	cases := []struct {
-		raw      string
-		snippts  []string
-		varNames []string
-		hasError bool
+		desc       string
+		raw        string
+		snippets   []string
+		identitors map[int]identitor
+		args       map[int][]identitor
+		hasError   bool
 	}{
 		{
+			"empty text",
 			"",
-			[]string{""},
 			nil,
+			map[int]identitor{},
+			map[int][]identitor{},
 			false,
 		},
 		{
+			"normal text",
 			"hello",
 			[]string{"hello"},
-			nil,
+			map[int]identitor{},
+			map[int][]identitor{},
 			false,
 		},
 		{
+			"only variable text",
 			"%{cluster}",
-			[]string{"", ""},
-			[]string{"cluster"},
+			[]string{""},
+			map[int]identitor{
+				1: identitor{
+					name:  "cluster",
+					isVar: true,
+				},
+			},
+			map[int][]identitor{},
 			false,
 		},
 		{
+			"text before variable",
 			"hello%{cluster}",
-			[]string{"hello", ""},
-			[]string{"cluster"},
+			[]string{"hello"},
+			map[int]identitor{
+				1: identitor{
+					name:  "cluster",
+					isVar: true,
+				},
+			},
+			map[int][]identitor{},
 			false,
 		},
 		{
+			"text after variable",
 			"%{cluster}hello",
 			[]string{"", "hello"},
-			[]string{"cluster"},
+			map[int]identitor{
+				1: identitor{
+					name:  "cluster",
+					isVar: true,
+				},
+			},
+			map[int][]identitor{},
 			false,
 		},
 		{
+			"two variables before text",
 			"%{cluster}%{partition}hello",
 			[]string{"", "", "hello"},
-			[]string{"cluster", "partition"},
+			map[int]identitor{
+				1: identitor{
+					name:  "cluster",
+					isVar: true,
+				},
+				2: identitor{
+					name:  "partition",
+					isVar: true,
+				},
+			},
+			map[int][]identitor{},
 			false,
 		},
 		{
+			"text with %",
 			"%%{cluster}%{partition}hello",
 			[]string{"%{cluster}", "hello"},
-			[]string{"partition"},
+			map[int]identitor{
+				1: identitor{
+					name:  "partition",
+					isVar: true,
+				},
+			},
+			map[int][]identitor{},
 			false,
 		},
 		{
+			"text with function",
+			"%{ cluster() }hello",
+			[]string{"", "hello"},
+			map[int]identitor{
+				1: identitor{
+					name:  "cluster",
+					isVar: false,
+				},
+			},
+			map[int][]identitor{
+				1: nil,
+			},
+			false,
+		},
+		{
+			"text with function with two string args",
+			"%{ cluster(`a`, `b`) }hello",
+			[]string{"", "hello"},
+			map[int]identitor{
+				1: identitor{
+					name:  "cluster",
+					isVar: false,
+				},
+			},
+			map[int][]identitor{
+				1: []identitor{
+					{
+						name:  "a",
+						isVar: false,
+					},
+					{
+						name:  "b",
+						isVar: false,
+					},
+				},
+			},
+			false,
+		},
+		{
+			"text with function with two variable args",
+			"%{ cluster(a, b) }hello",
+			[]string{"", "hello"},
+			map[int]identitor{
+				1: identitor{
+					name:  "cluster",
+					isVar: false,
+				},
+			},
+			map[int][]identitor{
+				1: []identitor{
+					{
+						name:  "a",
+						isVar: true,
+					},
+					{
+						name:  "b",
+						isVar: true,
+					},
+				},
+			},
+			false,
+		},
+		{
+			"text with %",
 			"%%%{cluster}{test}%{partition}hello",
 			[]string{"%", "{test}", "hello"},
-			[]string{"cluster", "partition"},
+			map[int]identitor{
+				1: identitor{
+					name:  "cluster",
+					isVar: true,
+				},
+				2: identitor{
+					name:  "partition",
+					isVar: true,
+				},
+			},
+			map[int][]identitor{},
 			false,
 		},
 		{
+			"single %",
 			"%",
 			nil,
 			nil,
+			nil,
 			true,
 		},
 		{
+			"unclosed script",
 			"%{",
 			nil,
 			nil,
+			nil,
 			true,
 		},
 		{
+			"empty variable",
 			"%{}",
+			nil,
 			nil,
 			nil,
 			true,
@@ -85,13 +211,15 @@ func TestNew(t *testing.T) {
 	for _, c := range cases {
 		in, err := New(c.raw)
 		if c.hasError {
-			assert.NotNil(t, err, "err should not be nil")
+			require.NotNil(t, err, "%v: err should not be nil", c.desc)
 			continue
+		} else {
+			require.Nil(t, err, "%v: err should be nil", c.desc)
 		}
 		temp, ok := in.(*template)
-		assert.Equal(t, true, ok, "Template is a *template")
-		assert.Equal(t, c.snippts, temp.snippts, "snippts are not equal")
-		assert.Equal(t, c.varNames, temp.varNames, "params are not equal")
+		require.Equal(t, true, ok, "%v: Template is a *template", c.desc)
+		assert.Equal(t, c.snippets, temp.snippets, "%v: snippets are not equal", c.desc)
+		assert.Equal(t, c.identitors, temp.identitors, "%v: params are not equal", c.desc)
 	}
 }
 
@@ -128,8 +256,17 @@ func TestRender(t *testing.T) {
 	}{
 		{
 			&template{
-				[]string{"cluster", "partition"},
-				[]string{
+				identitors: map[int]identitor{
+					1: identitor{
+						name:  "cluster",
+						isVar: true,
+					},
+					2: identitor{
+						name:  "partition",
+						isVar: true,
+					},
+				},
+				snippets: []string{
 					`aaa"`,
 					`"bbb`,
 					`ccc`,
@@ -144,8 +281,17 @@ func TestRender(t *testing.T) {
 		},
 		{
 			&template{
-				[]string{"cluster", "partition"},
-				[]string{
+				identitors: map[int]identitor{
+					1: identitor{
+						name:  "cluster",
+						isVar: true,
+					},
+					2: identitor{
+						name:  "partition",
+						isVar: true,
+					},
+				},
+				snippets: []string{
 					`{"cluster": "`,
 					`", "partition": "`,
 					`"}`,

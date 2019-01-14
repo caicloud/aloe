@@ -8,7 +8,7 @@ flow:
     body: |
       {
         "id": "3",
-        "title": "test"
+        "title": "%{ random(`[A-Za-z][A-Za-z0-9]*`, `63`) }"
       }
   response:
     statusCode: 201
@@ -24,4 +24,4 @@ flow:
       "Content-Type": "application/json"
   response:
     statusCode: 200
-    body: "%{testProduct}"
+    body: "%{ testProduct }"
