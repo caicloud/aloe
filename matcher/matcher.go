@@ -125,7 +125,7 @@ func generateMatcher(expr interface{}) (gomegatypes.GomegaMatcher, error) {
 
 // Parse parse matcher of response and returns GomegaMatcher
 func Parse(matcher []byte) (gomegatypes.GomegaMatcher, error) {
-	m := map[string]interface{}{}
+	var m interface{}
 	if err := json.Unmarshal(matcher, &m); err != nil {
 		return nil, err
 	}

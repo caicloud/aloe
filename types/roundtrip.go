@@ -13,6 +13,14 @@ type RoundTrip struct {
 	// Description describe the round trip
 	Description string `json:"description,omitempty"`
 
+	// Loop defines RoundTrip loop times
+	// If it is > 1 , an iterator variable will be defined
+	// and all definitions will be defined as an array
+	Loop int `json:"loop,omitempty"`
+
+	// When defines when round trip will run
+	When *When `json:"when,omitempty"`
+
 	// Request defines a http request template
 	Request Request `json:"request,omitempty"`
 
@@ -68,8 +76,22 @@ type Definition struct {
 	// Name defines variable name
 	Name string `json:"name"`
 
+	// Type defines variable from
+	// enum ["body", "status", "header"]
+	// default is body
+	Type string `json:"type,omitempty"`
+
 	// Selector select variable value from response
 	Selector []Template `json:"selector"`
+}
+
+// When defines round trip condition
+type When struct {
+	// Expr defines condition expression
+	Expr string `json:"expr"`
+
+	// Args defines additional args of condition
+	Args map[string]Template `json:"args,omitempty"`
 }
 
 // Template is used to get template from json

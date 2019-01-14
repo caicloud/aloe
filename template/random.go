@@ -1,8 +1,6 @@
 package template
 
 import (
-	"strconv"
-
 	"github.com/lucasjones/reggen"
 )
 
@@ -17,10 +15,6 @@ func random(regexp string) (string, error) {
 	return reggen.Generate(regexp, defaultLimit)
 }
 
-func randomWithLimit(regexp string, limitStr string) (string, error) {
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
-		return "", err
-	}
+func randomWithLimit(regexp string, limit int) (string, error) {
 	return reggen.Generate(regexp, limit)
 }

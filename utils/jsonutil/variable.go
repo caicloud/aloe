@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 // JSONType defines type of JSON
@@ -39,6 +40,9 @@ type Variable interface {
 	Unmarshal(obj interface{}) error
 	// String will returns the string value
 	String() string
+
+	// Select get subpath of variable
+	Select(selector ...string) (Variable, error)
 }
 
 // variable is a snippet of json string
@@ -124,6 +128,14 @@ func (v *variable) Unmarshal(obj interface{}) error {
 	return nil
 }
 
+func (v *variable) Select(selector ...string) (Variable, error) {
+	if len(selector) == 0 {
+		return v, nil
+	}
+	name := strings.Join(selector, ".")
+	return GetVariable(v.raw, name, selector...)
+}
+
 var bitSizes = map[reflect.Kind]int{
 	reflect.Float32: 32,
 	reflect.Float64: 64,
@@ -163,9 +175,51 @@ func (v *stringVar) Unmarshal(obj interface{}) error {
 	return fmt.Errorf("Not Supported")
 }
 
+func (v *stringVar) Select(selector ...string) (Variable, error) {
+	if len(selector) == 0 {
+		return v, nil
+	}
+	return nil, fmt.Errorf("can't select from json(%v) by selector %v", v, selector)
+}
+
 // NewVariable returns a variable with value s
-func NewVariable(name, value string) Variable {
+func NewStringVariable(name, value string) Variable {
 	return &stringVar{
+		name:  name,
+		value: value,
+	}
+}
+
+type intVar struct {
+	name  string
+	value int
+}
+
+// Name implements Variable interface
+func (v *intVar) Name() string {
+	return v.name
+}
+
+// String implements Variable interface
+func (v *intVar) String() string {
+	return strconv.Itoa(v.value)
+}
+
+// Unmarshal implements Variable interface
+func (v *intVar) Unmarshal(obj interface{}) error {
+	return fmt.Errorf("Not Supported")
+}
+
+func (v *intVar) Select(selector ...string) (Variable, error) {
+	if len(selector) == 0 {
+		return v, nil
+	}
+	return nil, fmt.Errorf("can't select from json(%v) by selector %v", v, selector)
+}
+
+// NewIntVariable returns a variable with value s
+func NewIntVariable(name string, value int) Variable {
+	return &intVar{
 		name:  name,
 		value: value,
 	}

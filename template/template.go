@@ -1,7 +1,7 @@
 package template
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/caicloud/aloe/utils/jsonutil"
 )
@@ -9,7 +9,7 @@ import (
 // Template is a simple template support variable
 // Golang template is too complex to use in this case
 type Template interface {
-	Render(vs map[string]jsonutil.Variable) (string, error)
+	Render(vs jsonutil.VariableMap) (string, error)
 }
 
 // Template defines template of request
@@ -106,7 +106,7 @@ func New(raw string) (Template, error) {
 // "%{number}" => "1.5"
 // %% => %
 // %%{string} => %{string}
-func (t *template) Render(vs map[string]jsonutil.Variable) (string, error) {
+func (t *template) Render(vs jsonutil.VariableMap) (string, error) {
 	out := ""
 	for i, snippet := range t.snippets {
 		identitor, ok := t.identitors[i]
@@ -135,26 +135,32 @@ func (t *template) Render(vs map[string]jsonutil.Variable) (string, error) {
 	return out, nil
 }
 
-func (t *template) renderScript(ident *identitor, index int, vs map[string]jsonutil.Variable) (string, error) {
+func (t *template) renderScript(ident *identitor, index int, vs jsonutil.VariableMap) (string, error) {
 	if ident.isVar {
-		v, ok := vs[ident.name]
-		if !ok {
-			return "", fmt.Errorf("can't find variable %v", ident.name)
+		names := strings.Split(ident.name, ".")
+		v, err := vs.Select(names...)
+		if err != nil {
+			// fmt.Printf("render error: %v\n", err)
+			return "", nil
 		}
 		return v.String(), nil
 	}
 	args := t.args[index]
-	funcArgs := []string{}
+	funcArgs := []Argument{}
 	for _, arg := range args {
+		var funcArg Argument
 		if arg.isVar {
-			v, ok := vs[arg.name]
-			if !ok {
-				return "", fmt.Errorf("can't find variable %v", arg.name)
+			argNames := strings.Split(arg.name, ".")
+			v, err := vs.Select(argNames...)
+			if err != nil {
+				funcArg = NewArgument("", true)
+			} else {
+				funcArg = NewArgument(v.String(), false)
 			}
-			funcArgs = append(funcArgs, v.String())
 		} else {
-			funcArgs = append(funcArgs, arg.name)
+			funcArg = NewArgument(arg.name, false)
 		}
+		funcArgs = append(funcArgs, funcArg)
 
 	}
 	return Call(ident.name, funcArgs...)

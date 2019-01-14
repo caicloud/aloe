@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/caicloud/aloe/types"
@@ -61,12 +62,12 @@ func RenderCleaners(ctx *Context, ccs []types.CleanerConfig) error {
 
 // RenderRoundTrip render template in round trip config with current context
 func RenderRoundTrip(ctx *Context, rtc *types.RoundTrip) (*RoundTrip, error) {
-	copy := CopyRoundTripTemplate(ctx.RoundTripTemplate)
-	if copy == nil {
-		copy = &RoundTripTemplate{}
+	cp := CopyRoundTripTemplate(ctx.RoundTripTemplate)
+	if cp == nil {
+		cp = &RoundTripTemplate{}
 	}
 	rt := &RoundTrip{
-		RoundTripTemplate: *copy,
+		RoundTripTemplate: *cp,
 	}
 	if err := renderRequest(ctx, &rt.Request, &rtc.Request); err != nil {
 		return nil, err
@@ -157,6 +158,14 @@ func renderDefinition(ctx *Context, dcs []types.Definition) ([]Definition, error
 		d := Definition{
 			Name: dc.Name,
 		}
+		switch dc.Type {
+		case "body", "header", "status":
+			d.Type = DefinitionType(dc.Type)
+		case "":
+			d.Type = BodyType
+		default:
+			return nil, fmt.Errorf("can't understand definition type %v: only [body, header, status] is allowed", dc.Type)
+		}
 		for _, st := range dc.Selector {
 			s, err := st.Render(ctx.Variables)
 			if err != nil {
@@ -181,4 +190,22 @@ func renderHeader(ctx *Context, current map[string]string, headers map[string]ty
 		current[k] = value
 	}
 	return nil
+}
+
+func RenderWhen(ctx *Context, whenConf *types.When) (*When, error) {
+	if whenConf == nil {
+		return nil, nil
+	}
+	when := When{
+		Expr: whenConf.Expr,
+		Args: map[string]string{},
+	}
+	for k, v := range whenConf.Args {
+		arg, err := v.Render(ctx.Variables)
+		if err != nil {
+			return nil, err
+		}
+		when.Args[k] = arg
+	}
+	return &when, nil
 }

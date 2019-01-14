@@ -110,7 +110,7 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 		m.failures = append(m.failures, fmt.Errorf("can't read body from response"))
 		return false, nil
 	}
-	if resp.StatusCode != m.code {
+	if m.code != 0 && resp.StatusCode != m.code {
 		m.failures = append(m.failures, fmt.Errorf("status code is not matched, expected: %v, actual: %v", m.code, resp.StatusCode))
 		m.failures = append(m.failures, fmt.Errorf("api status: %v", string(body)))
 	}
@@ -127,9 +127,9 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 	}
 
 	if m.bodyMatcher != nil {
-		b := map[string]interface{}{}
+		var b interface{}
 		if err := json.Unmarshal(body, &b); err != nil {
-			m.failures = append(m.failures, fmt.Errorf("can't unmarshal body to json, NOW only json Content-Type is supported"))
+			m.failures = append(m.failures, fmt.Errorf("can't unmarshal body(%v) to json, NOW only json Content-Type is supported", string(body)))
 			return false, nil
 
 		}
@@ -155,12 +155,22 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 	m.vars = map[string]jsonutil.Variable{}
 	isErr := false
 	for _, def := range m.defs {
-		v, err := jsonutil.GetVariable(body, def.Name, def.Selector...)
-		if err != nil {
-			m.failures = append(m.failures, err)
-			isErr = true
+		switch def.Type {
+		case runtime.BodyType:
+			v, err := jsonutil.GetVariable(body, def.Name, def.Selector...)
+			if err != nil {
+				m.failures = append(m.failures, err)
+				isErr = true
+			}
+			m.vars[def.Name] = v
+		case runtime.StatusType:
+			m.vars[def.Name] = jsonutil.NewIntVariable(def.Name, resp.StatusCode)
+		case runtime.HeaderType:
+			if len(def.Selector) != 1 {
+				m.failures = append(m.failures, fmt.Errorf("header definition expected selector with len 1, actual is %v", def.Selector))
+			}
+			m.vars[def.Name] = jsonutil.NewStringVariable(def.Name, resp.Header.Get(def.Selector[0]))
 		}
-		m.vars[def.Name] = v
 	}
 	if isErr {
 		return false, nil

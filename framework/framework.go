@@ -46,7 +46,10 @@ func NewFramework(dataDirs ...string) Framework {
 			respHeader.Name(): respHeader,
 			host.Name():       host,
 		},
-		adam: &runtime.Context{},
+		adam: &runtime.Context{
+			Summary:   "adam context",
+			Variables: jsonutil.NewVariableMap("", nil),
+		},
 	}
 }
 
@@ -65,12 +68,12 @@ type genericFramework struct {
 // Env implements Framework interface
 func (gf *genericFramework) Env(key, value string) error {
 	if gf.adam.Variables == nil {
-		gf.adam.Variables = map[string]jsonutil.Variable{}
+		gf.adam.Variables = jsonutil.NewVariableMap("", nil)
 	}
-	if _, ok := gf.adam.Variables[key]; ok {
+	if _, ok := gf.adam.Variables.Get(key); ok {
 		return fmt.Errorf("%v has been defined", key)
 	}
-	gf.adam.Variables[key] = jsonutil.NewVariable(key, value)
+	gf.adam.Variables.Set(key, jsonutil.NewStringVariable(key, value))
 	return nil
 }
 
@@ -125,6 +128,8 @@ func (gf *genericFramework) walk(parent *runtime.Context, dir *data.Dir) func() 
 		count := 0
 
 		var ctx runtime.Context
+		// patch defines variables produced by this context
+		patch := jsonutil.NewVariableMap("", nil)
 
 		for name, d := range dirs {
 			f := gf.walk(&ctx, &d)
@@ -138,8 +143,9 @@ func (gf *genericFramework) walk(parent *runtime.Context, dir *data.Dir) func() 
 		}
 
 		ginkgo.BeforeEach(func() {
-			// inherit parent context
-			runtime.CopyContext(&ctx, parent)
+			// reconstruct children context
+			gomega.Expect(runtime.ReconstructChildContext(&ctx, parent, patch)).
+				NotTo(gomega.HaveOccurred())
 
 			// render preset config
 			gomega.Expect(runtime.RenderPresetters(&ctx, ctxConfig.Presetters)).
@@ -148,11 +154,7 @@ func (gf *genericFramework) walk(parent *runtime.Context, dir *data.Dir) func() 
 			gomega.Expect(gf.constructRoundTripTemplate(&ctx)).
 				NotTo(gomega.HaveOccurred())
 
-			if count == 0 {
-				gf.constructFlow(&ctx, ctxConfig.Flow)
-			}
-			gf.constructValidatedFlow(&ctx, ctxConfig.ValidatedFlow)
-
+			gf.constructFlow(&ctx, patch, ctxConfig.Flow)
 		})
 
 		ginkgo.AfterEach(func() {
@@ -182,7 +184,10 @@ func (gf *genericFramework) itFunc(ctx *runtime.Context, file *data.File) func()
 	c := file.Case
 	return func() {
 		for _, rt := range c.Flow {
-			gf.roundTrip(ctx, &rt, true)
+			ginkgo.By(fmt.Sprintf("context: %v", ctx.Variables))
+			vs := gf.roundTrip(ctx, &rt)
+			_, err := jsonutil.Merge(ctx.Variables, jsonutil.OverwriteOption, false, vs)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
 	}
 }
