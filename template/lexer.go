@@ -208,7 +208,7 @@ func (lr *Lexer) nextName() ([]rune, error) {
 	lr.offset++
 	token := []rune{first}
 	for i, c := range lr.buf[lr.offset:] {
-		if unicode.IsLetter(c) || c == '_' || unicode.IsDigit(c) {
+		if unicode.IsLetter(c) || c == '_' || c == '.' || unicode.IsDigit(c) {
 			token = append(token, c)
 		} else {
 			lr.offset += i

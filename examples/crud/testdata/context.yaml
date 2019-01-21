@@ -6,34 +6,40 @@ presetters:
 - name: host
   args:
     host: "%{host}"
-validatedFlow:
-- constructor:
-  - description: "Init a product"
-    request:
-      api: POST /products
-      body: |
-        {
-          "id": "1",
-          "title": "test"
-        }
-    response:
-      statusCode: 201
-    definitions:
-    - name: "testProduct"
-    - name: "testProductId"
-      selector:
-      - "id"
-  validator:
-  - description: "Can get the created product"
-    request:
-      api: GET /products/1
-    response:
-      statusCode: 200
-    definitions:
-    - name: "testProduct"
-    - name: "testProductId"
-      selector:
-      - "id"
+flow:
+- description: "try to get product"
+  loop: 2
+  when:
+    expr: "hasCreate == 'true'"
+    args:
+      hasCreate: "%{ exist(testProductId.iterator) }"
+  request:
+    api: GET /products/%{testProductId.iterator}
+  definitions:
+  - name: "getStatus"
+    type: status
+
+- description: "Init a product if it is not created"
+  loop: 2
+  when:
+    expr: "hasCreate == 'false' || status == '404'"
+    args:
+      hasCreate: "%{ exist(testProductId.iterator) }"
+      status: "%{ getStatus.iterator }"
+  request:
+    api: POST /products
+    body: |
+      {
+        "id": "%{random(`[a-z][a-z0-9]*`)}",
+        "title": "test"
+      }
+  response:
+    statusCode: 201
+  definitions:
+  - name: "testProduct"
+  - name: "testProductId"
+    selector:
+    - "id"
 cleaners:
 - name: "product"
   args:

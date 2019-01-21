@@ -1,26 +1,38 @@
 package runtime
 
-import (
-	"github.com/caicloud/aloe/utils/jsonutil"
-)
+import "github.com/caicloud/aloe/utils/jsonutil"
 
 // CopyContext copy content of context from src context
 func CopyContext(dest, src *Context) {
-	dest.Variables = copyVariables(src.Variables)
+	dest.Summary = src.Summary
+	if src.Variables == nil {
+		dest.Variables = jsonutil.NewVariableMap("", nil)
+	} else {
+		dest.Variables = src.Variables.Copy()
+	}
 	dest.RoundTripTemplate = CopyRoundTripTemplate(src.RoundTripTemplate)
 	dest.Presetters = nil
 	dest.Cleaners = nil
 }
 
-func copyVariables(variables map[string]jsonutil.Variable) map[string]jsonutil.Variable {
-	if variables == nil {
-		return nil
+// ReconstructChildContext will reconstruct context
+// from parent and previous variable patch
+// for {
+//   child = parent + prevPatch
+//   patch = roundTrip(child)
+//   prevPatch = patch
+// }
+func ReconstructChildContext(dst *Context, parent *Context, patch jsonutil.VariableMap) error {
+	vs, err := jsonutil.Merge(parent.Variables, jsonutil.ConflictOption, true, patch)
+	if err != nil {
+		return err
 	}
-	vs := make(map[string]jsonutil.Variable)
-	for k, v := range variables {
-		vs[k] = v
-	}
-	return vs
+	dst.Parent = parent
+	dst.Variables = vs
+	dst.RoundTripTemplate = CopyRoundTripTemplate(parent.RoundTripTemplate)
+	dst.Presetters = nil
+	dst.Cleaners = nil
+	return nil
 }
 
 // CopyRoundTripTemplate will return a copy of round trip

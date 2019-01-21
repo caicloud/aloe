@@ -1,7 +1,6 @@
 package template
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/caicloud/aloe/utils/jsonutil"
@@ -184,6 +183,23 @@ func TestNew(t *testing.T) {
 			false,
 		},
 		{
+			"text with variables with dot",
+			"%{cluster.items.0}test%{partition}hello",
+			[]string{"", "test", "hello"},
+			map[int]identitor{
+				1: identitor{
+					name:  "cluster.items.0",
+					isVar: true,
+				},
+				2: identitor{
+					name:  "partition",
+					isVar: true,
+				},
+			},
+			map[int][]identitor{},
+			false,
+		},
+		{
 			"single %",
 			"%",
 			nil,
@@ -223,30 +239,6 @@ func TestNew(t *testing.T) {
 	}
 }
 
-type fakeVar struct {
-	name  string
-	value string
-}
-
-func (f *fakeVar) Unmarshal(obj interface{}) error {
-	return fmt.Errorf("UNIMPLEMENTED")
-}
-
-func (f *fakeVar) Name() string {
-	return f.name
-}
-
-func (f *fakeVar) String() string {
-	return f.value
-}
-
-func fakeVariable(name, value string) jsonutil.Variable {
-	return &fakeVar{
-		name:  name,
-		value: value,
-	}
-}
-
 func TestRender(t *testing.T) {
 	cases := []struct {
 		t        *template
@@ -273,8 +265,8 @@ func TestRender(t *testing.T) {
 				},
 			},
 			map[string]jsonutil.Variable{
-				"cluster":   fakeVariable("cluster", "cid"),
-				"partition": fakeVariable("partition", "1.5"),
+				"cluster":   jsonutil.NewStringVariable("cluster", "cid"),
+				"partition": jsonutil.NewStringVariable("partition", "1.5"),
 			},
 			`aaa"cid"bbb1.5ccc`,
 			false,
@@ -298,8 +290,42 @@ func TestRender(t *testing.T) {
 				},
 			},
 			map[string]jsonutil.Variable{
-				"cluster":   fakeVariable("cluster", "cid"),
-				"partition": fakeVariable("partition", "1.5"),
+				"cluster":   jsonutil.NewStringVariable("cluster", "cid"),
+				"partition": jsonutil.NewStringVariable("partition", "1.5"),
+			},
+			`{"cluster": "cid", "partition": "1.5"}`,
+			false,
+		},
+		{
+			&template{
+				identitors: map[int]identitor{
+					1: identitor{
+						name:  "cluster.items.0",
+						isVar: true,
+					},
+					2: identitor{
+						name:  "partition.0",
+						isVar: true,
+					},
+				},
+				snippets: []string{
+					`{"cluster": "`,
+					`", "partition": "`,
+					`"}`,
+				},
+			},
+			map[string]jsonutil.Variable{
+				"cluster": jsonutil.NewVariableMap("cluster",
+					map[string]jsonutil.Variable{
+						"items": jsonutil.NewVariableArray("items",
+							[]jsonutil.Variable{
+								jsonutil.NewStringVariable("", "cid"),
+							}),
+					}),
+				"partition": jsonutil.NewVariableArray("partition",
+					[]jsonutil.Variable{
+						jsonutil.NewStringVariable("", "1.5"),
+					}),
 			},
 			`{"cluster": "cid", "partition": "1.5"}`,
 			false,
@@ -307,7 +333,8 @@ func TestRender(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		out, err := c.t.Render(c.vs)
+		vm := jsonutil.NewVariableMap("", c.vs)
+		out, err := c.t.Render(vm)
 		if c.hasError {
 			continue
 		}

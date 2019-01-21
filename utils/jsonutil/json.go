@@ -10,11 +10,11 @@ import (
 func GetVariable(rawJSON []byte, name string, selector ...string) (Variable, error) {
 	v, dt, _, err := jsonparser.Get(rawJSON, selector...)
 	if err != nil {
-		return nil, fmt.Errorf("can't get variable %v from json with selector %v: %v", name, selector, err)
+		return nil, fmt.Errorf("can't get variable %v from json(%v) with selector %v: %v", name, string(rawJSON), selector, err)
 	}
 	t := convert(dt)
 	if t == "" {
-		return nil, fmt.Errorf("can't get variable %v from json with selector %v: unknown type", name, selector)
+		return nil, fmt.Errorf("can't get variable %v from json(%v) with selector %v: unknown type", name, string(rawJSON), selector)
 	}
 	return &variable{
 		raw:      v,

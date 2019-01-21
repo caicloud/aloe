@@ -4,12 +4,24 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Knetic/govaluate"
 	"github.com/caicloud/aloe/roundtrip"
 	"github.com/caicloud/aloe/runtime"
 	"github.com/caicloud/aloe/types"
+	"github.com/caicloud/aloe/utils/jsonutil"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 )
+
+const (
+	// IteratorName defines iterator variable name
+	IteratorName = "iterator"
+)
+
+// Iterate set iterator variable in context variable
+func Iterate(ctx *runtime.Context, iter int) {
+	ctx.Variables.Set(IteratorName, jsonutil.NewIntVariable(IteratorName, iter))
+}
 
 var (
 	// defaultTimeout defines default timeout of an async task
@@ -19,30 +31,36 @@ var (
 	defaultInterval = 100 * time.Millisecond
 )
 
-func (gf *genericFramework) constructFlow(ctx *runtime.Context, flow []types.RoundTrip) {
-	for _, rt := range flow {
-		gf.roundTrip(ctx, &rt, false)
+// iter: iter are variables defined in one flow
+// all: all are variables produced by all flow
+// patch: patch are variables produced by this context
+// current: current are variables now
+// parent: parent are variables of parent context
+// iter should be merge into all
+func mergeVariable(parent, current, patch, all, iter jsonutil.VariableMap) error {
+	// roundtrip should not redefine
+	if _, err := jsonutil.Merge(all, jsonutil.ConflictOption, false, iter); err != nil {
+		return err
 	}
+	if _, err := jsonutil.Merge(patch, jsonutil.OverwriteOption, false, iter); err != nil {
+		return err
+	}
+	conflict := jsonutil.IsConflict(parent, patch)
+	if conflict {
+		return fmt.Errorf("context define variables which have been defined in parents")
+	}
+	if _, err := jsonutil.Merge(current, jsonutil.OverwriteOption, false, iter); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (gf *genericFramework) constructValidatedFlow(ctx *runtime.Context, flow []types.RoundTripTuple) {
-	for _, rts := range flow {
-		failed := false
-		for _, rt := range rts.Constructor {
-			notMatched, err := gf.tryRoundTrip(ctx, &rt, false)
-			// ignore round trip error
-			if notMatched {
-				failed = true
-				break
-			}
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		}
-		if !failed {
-			continue
-		}
-		for _, rt := range rts.Validator {
-			gf.roundTrip(ctx, &rt, false)
-		}
+func (gf *genericFramework) constructFlow(ctx *runtime.Context, patch jsonutil.VariableMap, flow []types.RoundTrip) {
+	flowVs := jsonutil.NewVariableMap("", nil)
+	for _, rt := range flow {
+		vs := gf.roundTrip(ctx, &rt)
+		err := mergeVariable(ctx.Parent.Variables, ctx.Variables, patch, flowVs, vs)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}
 }
 
@@ -61,48 +79,35 @@ func (gf *genericFramework) constructRoundTripTemplate(ctx *runtime.Context) err
 	return nil
 }
 
-func (gf *genericFramework) tryRoundTrip(ctx *runtime.Context, origin *types.RoundTrip, overwrite bool) (bool, error) {
-	rt, err := runtime.RenderRoundTrip(ctx, origin)
-	if err != nil {
-		return false, err
+func (gf *genericFramework) onceRoundTrip(ctx *runtime.Context, originRoundTrip *types.RoundTrip, iter int) jsonutil.VariableMap {
+	if iter != -1 {
+		Iterate(ctx, iter)
 	}
 
-	ginkgo.By(origin.Description)
-
-	respMatcher, err := roundtrip.MatchResponse(rt)
-	if err != nil {
-		return false, err
-	}
-	// TODO(liubog2008): support async tasks
-	if rt.Response.Async {
-		return false, fmt.Errorf("async round trip is not supported for constructor now")
-	}
-	resp, err := gf.client.DoRequest(rt)
-	if err != nil {
-		return false, err
-	}
-	matched, err := respMatcher.Match(resp)
-	if err != nil {
-		return false, err
-	}
-	if !matched {
-		return true, fmt.Errorf(respMatcher.FailureMessage(resp))
-	}
-	vs := respMatcher.Variables()
-	for k, v := range vs {
-		if _, ok := ctx.Variables[k]; ok && !overwrite {
-			return false, fmt.Errorf("variable %v has been defined", k)
+	if originRoundTrip.When != nil {
+		when, err := runtime.RenderWhen(ctx, originRoundTrip.When)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		result, err := eval(ctx, when)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		if !result {
+			return nil
 		}
-		ctx.Variables[k] = v
 	}
-	return false, nil
-}
 
-func (gf *genericFramework) roundTrip(ctx *runtime.Context, originRoundTrip *types.RoundTrip, overwrite bool) {
 	rt, err := runtime.RenderRoundTrip(ctx, originRoundTrip)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	ginkgo.By(originRoundTrip.Description)
+	ginkgo.By(fmt.Sprintf("%s: %v",
+		originRoundTrip.Description,
+		ctx.Variables,
+	))
+	ginkgo.By(fmt.Sprintf("%s: %s %s://%s%s",
+		originRoundTrip.Description,
+		rt.Request.Method,
+		rt.Request.Scheme,
+		rt.Request.Host,
+		rt.Request.Path,
+	))
 
 	respMatcher, err := roundtrip.MatchResponse(rt)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -129,10 +134,55 @@ func (gf *genericFramework) roundTrip(ctx *runtime.Context, originRoundTrip *typ
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		gomega.Expect(resp).To(respMatcher)
 	}
-	vs := respMatcher.Variables()
-	for k, v := range vs {
-		_, ok := ctx.Variables[k]
-		gomega.Expect(ok && !overwrite).To(gomega.BeFalse(), "variable %v has been defined", k)
-		ctx.Variables[k] = v
+	return jsonutil.NewVariableMap("", respMatcher.Variables())
+}
+
+func eval(ctx *runtime.Context, when *runtime.When) (bool, error) {
+	expression, err := govaluate.NewEvaluableExpression(when.Expr)
+	if err != nil {
+		return false, err
 	}
+	ps := make(map[string]interface{})
+	vars := expression.Vars()
+	for _, k := range vars {
+		arg, ok := when.Args[k]
+		if ok {
+			ps[k] = arg
+			continue
+		}
+		v, ok := ctx.Variables.Get(k)
+		if ok {
+			ps[k] = v.String()
+			continue
+		}
+		// use empty as expr variable
+		ps[k] = ""
+	}
+	result, err := expression.Evaluate(ps)
+	if err != nil {
+		return false, err
+	}
+	b, ok := result.(bool)
+	if !ok {
+		return false, fmt.Errorf("when condition MUST be eval as a bool")
+	}
+	if !b {
+		ginkgo.By(fmt.Sprintf("condition `%v`, args: %v, eval result is false", when.Expr, ps))
+	}
+	return b, nil
+
+}
+
+func (gf *genericFramework) roundTrip(ctx *runtime.Context, rt *types.RoundTrip) jsonutil.VariableMap {
+	if rt.Loop == 0 {
+		return gf.onceRoundTrip(ctx, rt, -1)
+	}
+	vars := jsonutil.NewVariableMap("", nil)
+	for i := 0; i < rt.Loop; i++ {
+		vs := gf.onceRoundTrip(ctx, rt, i)
+		_, err := jsonutil.Merge(vars, jsonutil.CombineOption, false, vs)
+
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	}
+	return vars
 }

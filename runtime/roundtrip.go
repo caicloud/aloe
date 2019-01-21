@@ -4,6 +4,18 @@ import (
 	"time"
 )
 
+// DefinitionType defines whether definition is from
+type DefinitionType string
+
+const (
+	// BodyType means definition from body
+	BodyType DefinitionType = "body"
+	// HeaderType means definition from header
+	HeaderType DefinitionType = "header"
+	// StatusType means definition from status
+	StatusType DefinitionType = "status"
+)
+
 // RoundTripTemplate defines template of round trip
 type RoundTripTemplate struct {
 	// Request defines http request
@@ -17,6 +29,9 @@ type RoundTripTemplate struct {
 type RoundTrip struct {
 	// RoundTripTemplate defines round trip template
 	RoundTripTemplate
+
+	// When defines round trip condition
+	When *When
 
 	// Definitions defines variables from response
 	Definitions []Definition
@@ -70,6 +85,21 @@ type Definition struct {
 	// Name defines variable name
 	Name string
 
+	// Type defines variable from
+	// enum ["body", "status", "header"]
+	// default is body
+	Type DefinitionType
+
 	// Selector defines variable selector
+	// only used when type is body and header
 	Selector []string
+}
+
+// When defines roundtrip condition
+type When struct {
+	// Expr defines condition expression
+	Expr string
+
+	// Args defines additional args
+	Args map[string]string
 }

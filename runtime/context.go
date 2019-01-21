@@ -6,8 +6,14 @@ import (
 
 // Context defines context of test cases
 type Context struct {
+	// Summary defines context summary
+	Summary string
+
+	// Parent defines parent context
+	Parent *Context
+
 	// Variables defines variables the context has
-	Variables map[string]jsonutil.Variable
+	Variables jsonutil.VariableMap
 
 	// Presetters defines the presetters of context
 	Presetters []Presetter
