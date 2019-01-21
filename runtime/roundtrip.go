@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// DefinitionType defines whether definition is from
+// DefinitionType defines where definition is from
 type DefinitionType string
 
 const (

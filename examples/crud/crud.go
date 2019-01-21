@@ -12,6 +12,10 @@ import (
 	"github.com/onsi/ginkgo"
 )
 
+func init() {
+	aloe.Init(nil)
+}
+
 var s = server.NewProductServer()
 
 // RunTEST runs crud test

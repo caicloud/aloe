@@ -1,4 +1,6 @@
 summary: "Try get a product"
+labels:
+- "get"
 flow:
 - description: "Get product inited in context.yaml"
   request:
