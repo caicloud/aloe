@@ -2,13 +2,16 @@ package framework
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/caicloud/aloe/cleaner"
+	"github.com/caicloud/aloe/config"
 	"github.com/caicloud/aloe/data"
 	"github.com/caicloud/aloe/preset"
 	"github.com/caicloud/aloe/roundtrip"
 	"github.com/caicloud/aloe/runtime"
+	"github.com/caicloud/aloe/types"
 	"github.com/caicloud/aloe/utils/jsonutil"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -33,12 +36,13 @@ type Framework interface {
 }
 
 // NewFramework returns an API test framework
-func NewFramework(dataDirs ...string) Framework {
+func NewFramework(c *config.Config) Framework {
 	reqHeader := preset.NewHeaderPresetter(preset.RequestType)
 	respHeader := preset.NewHeaderPresetter(preset.ResponseType)
 	host := preset.NewHostPresetter()
-	return &genericFramework{
-		dataDirs: dataDirs,
+
+	gf := &genericFramework{
+		dataDirs: nil,
 		client:   roundtrip.NewClient(),
 		cleaners: map[string]cleaner.Cleaner{},
 		presetters: map[string]preset.Presetter{
@@ -50,7 +54,10 @@ func NewFramework(dataDirs ...string) Framework {
 			Summary:   "adam context",
 			Variables: jsonutil.NewVariableMap("", nil),
 		},
+		c: c,
 	}
+
+	return gf
 }
 
 type genericFramework struct {
@@ -63,6 +70,12 @@ type genericFramework struct {
 	presetters map[string]preset.Presetter
 
 	adam *runtime.Context
+
+	c *config.Config
+
+	focus map[string]struct{}
+
+	skip map[string]struct{}
 }
 
 // Env implements Framework interface
@@ -106,6 +119,10 @@ func (gf *genericFramework) RegisterPresetter(ps ...preset.Presetter) error {
 
 func (gf *genericFramework) Run(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
+	if gf.c != nil {
+		gf.skip = arrayToSet(strings.Split(gf.c.Skip, ","))
+		gf.focus = arrayToSet(strings.Split(gf.c.Focus, ","))
+	}
 	for _, r := range gf.dataDirs {
 		dir, err := data.Walk(r)
 		if err != nil {
@@ -139,7 +156,9 @@ func (gf *genericFramework) walk(parent *runtime.Context, dir *data.Dir) func() 
 		for name, c := range files {
 			summary := genSummary(name, c.Case.Summary)
 			f := gf.itFunc(&ctx, &c)
-			ginkgo.It(summary, f)
+			if f != nil {
+				ginkgo.It(summary, f)
+			}
 		}
 
 		ginkgo.BeforeEach(func() {
@@ -182,6 +201,9 @@ func genSummary(name, summary string) string {
 
 func (gf *genericFramework) itFunc(ctx *runtime.Context, file *data.File) func() {
 	c := file.Case
+	if !gf.selected(&c) {
+		return nil
+	}
 	return func() {
 		for _, rt := range c.Flow {
 			ginkgo.By(fmt.Sprintf("context: %v", ctx.Variables))
@@ -190,4 +212,32 @@ func (gf *genericFramework) itFunc(ctx *runtime.Context, file *data.File) func()
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
 	}
+}
+
+func (gf *genericFramework) selected(c *types.Case) bool {
+	if len(gf.focus) != 0 {
+		for _, label := range c.Labels {
+			if _, ok := gf.focus[label]; ok {
+				return true
+			}
+		}
+		return false
+	}
+	if len(gf.skip) != 0 {
+		for _, label := range c.Labels {
+			if _, ok := gf.skip[label]; ok {
+				return false
+			}
+		}
+		return true
+	}
+	return true
+}
+
+func arrayToSet(array []string) map[string]struct{} {
+	m := map[string]struct{}{}
+	for _, item := range array {
+		m[item] = struct{}{}
+	}
+	return m
 }

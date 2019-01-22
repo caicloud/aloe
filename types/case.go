@@ -5,6 +5,9 @@ type Case struct {
 	// Summary describes the test case
 	Summary string `json:"summary,omitempty"`
 
+	// Labels defines case labels for selector
+	Labels []string `json:"labels,omitempty"`
+
 	// Flow defines test flow of a test case
 	Flow []RoundTrip `json:"flow,omitempty"`
 }
