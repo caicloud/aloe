@@ -164,7 +164,7 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 			}
 			m.vars[def.Name] = v
 		case runtime.StatusType:
-			m.vars[def.Name] = jsonutil.NewIntVariable(def.Name, resp.StatusCode)
+			m.vars[def.Name] = jsonutil.NewIntVariable(def.Name, int64(resp.StatusCode))
 		case runtime.HeaderType:
 			if len(def.Selector) != 1 {
 				m.failures = append(m.failures, fmt.Errorf("header definition expected selector with len 1, actual is %v", def.Selector))

@@ -1,27 +1,27 @@
-summary: "Try create a product"
+summary: "Try update a product"
 flow:
-- description: "Create a product "
+- description: "Update a product "
   request:
-    api: POST /products
+    api: PUT /products/%{ testProductId.0 }
     headers:
       "Content-Type": "application/json"
     body: |
       {
-        "id": "2",
+        "id": "%{ testProductId.0 }",
         "title": "test"
       }
   response:
-    statusCode: 201
+    statusCode: 200
   definitions:
-  - name: "testProduct"
-  - name: "testProductId"
+  - name: "updatedProduct"
+  - name: "updatedProductId"
     selector:
     - "id"
 - description: "Verify product updated"
   request:
-    api: GET /products/%{testProductId}
+    api: GET /products/%{updatedProductId}
     headers:
       "Content-Type": "application/json"
   response:
     statusCode: 200
-    body: "%{testProduct}"
+    body: "%{updatedProduct}"

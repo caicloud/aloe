@@ -8,7 +8,7 @@ go:
 
 before_install:
   - go get github.com/mattn/goveralls
-  - ./hack/install-linter.sh -b $GOPATH v2.0.12
+  - ./hack/install-linter.sh -b $GOPATH/bin v2.0.12
 
 script:
   - gometalinter ./...

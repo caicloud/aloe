@@ -8,24 +8,24 @@ presetters:
     host: "%{host}"
 flow:
 - description: "try to get product"
-  loop: 2
+  loop: 4
   when:
     expr: "hasCreate == 'true'"
     args:
-      hasCreate: "%{ exist(testProductId.iterator) }"
+      hasCreate: "%{ exist(testProductId, iterator) }"
   request:
-    api: GET /products/%{testProductId.iterator}
+    api: GET /products/%{ select(testProductId, iterator) }
   definitions:
   - name: "getStatus"
     type: status
 
 - description: "Init a product if it is not created"
-  loop: 2
+  loop: 4
   when:
     expr: "hasCreate == 'false' || status == '404'"
     args:
-      hasCreate: "%{ exist(testProductId.iterator) }"
-      status: "%{ getStatus.iterator }"
+      hasCreate: "%{ exist(testProductId, iterator) }"
+      status: "%{ select(getStatus, iterator) }"
   request:
     api: POST /products
     body: |
@@ -43,4 +43,4 @@ flow:
 cleaners:
 - name: "product"
   args:
-    product: "1"
+    product: "%{testProductId.0}"

@@ -171,7 +171,14 @@ func (v *stringVar) String() string {
 
 // Unmarshal implements Variable interface
 func (v *stringVar) Unmarshal(obj interface{}) error {
-	return fmt.Errorf("Not Supported")
+	value := reflect.ValueOf(obj).Elem()
+	switch value.Kind() {
+	case reflect.String:
+		value.SetString(v.value)
+	default:
+		return fmt.Errorf("can't unmarshal string to object with type %T", obj)
+	}
+	return nil
 }
 
 func (v *stringVar) Select(selector ...string) (Variable, error) {
@@ -191,7 +198,7 @@ func NewStringVariable(name, value string) Variable {
 
 type intVar struct {
 	name  string
-	value int
+	value int64
 }
 
 // Name implements Variable interface
@@ -201,12 +208,19 @@ func (v *intVar) Name() string {
 
 // String implements Variable interface
 func (v *intVar) String() string {
-	return strconv.Itoa(v.value)
+	return strconv.FormatInt(v.value, 10)
 }
 
 // Unmarshal implements Variable interface
 func (v *intVar) Unmarshal(obj interface{}) error {
-	return fmt.Errorf("Not Supported")
+	value := reflect.ValueOf(obj).Elem()
+	switch value.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		value.SetInt(v.value)
+	default:
+		return fmt.Errorf("can't unmarshal int to object with type %T", obj)
+	}
+	return nil
 }
 
 // Select implements Variable interface
@@ -218,7 +232,7 @@ func (v *intVar) Select(selector ...string) (Variable, error) {
 }
 
 // NewIntVariable returns a variable with value s
-func NewIntVariable(name string, value int) Variable {
+func NewIntVariable(name string, value int64) Variable {
 	return &intVar{
 		name:  name,
 		value: value,

@@ -208,7 +208,7 @@ func (gf *genericFramework) itFunc(ctx *runtime.Context, file *data.File) func()
 		for _, rt := range c.Flow {
 			ginkgo.By(fmt.Sprintf("context: %v", ctx.Variables))
 			vs := gf.roundTrip(ctx, &rt)
-			_, err := jsonutil.Merge(ctx.Variables, jsonutil.OverwriteOption, false, vs)
+			_, err := jsonutil.Merge(ctx.Variables, jsonutil.ConflictOption, false, vs)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		}
 	}
@@ -216,6 +216,7 @@ func (gf *genericFramework) itFunc(ctx *runtime.Context, file *data.File) func()
 
 func (gf *genericFramework) selected(c *types.Case) bool {
 	if len(gf.focus) != 0 {
+		fmt.Printf("focus: %v, %v\n", len(gf.focus), gf.focus)
 		for _, label := range c.Labels {
 			if _, ok := gf.focus[label]; ok {
 				return true
@@ -224,6 +225,7 @@ func (gf *genericFramework) selected(c *types.Case) bool {
 		return false
 	}
 	if len(gf.skip) != 0 {
+		fmt.Printf("skip : %v\n", len(gf.skip))
 		for _, label := range c.Labels {
 			if _, ok := gf.skip[label]; ok {
 				return false
@@ -237,7 +239,9 @@ func (gf *genericFramework) selected(c *types.Case) bool {
 func arrayToSet(array []string) map[string]struct{} {
 	m := map[string]struct{}{}
 	for _, item := range array {
-		m[item] = struct{}{}
+		if item != "" {
+			m[item] = struct{}{}
+		}
 	}
 	return m
 }
