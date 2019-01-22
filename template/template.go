@@ -1,6 +1,7 @@
 package template
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/caicloud/aloe/utils/jsonutil"
@@ -140,28 +141,39 @@ func (t *template) renderScript(ident *identitor, index int, vs jsonutil.Variabl
 		names := strings.Split(ident.name, ".")
 		v, err := vs.Select(names...)
 		if err != nil {
-			// fmt.Printf("render error: %v\n", err)
-			return "", nil
+			return "", fmt.Errorf("render %v err: %v", ident.name, err)
 		}
 		return v.String(), nil
 	}
 	args := t.args[index]
-	funcArgs := []Argument{}
+	funcArgs := []jsonutil.Variable{}
 	for _, arg := range args {
-		var funcArg Argument
+		var funcArg jsonutil.Variable
 		if arg.isVar {
 			argNames := strings.Split(arg.name, ".")
 			v, err := vs.Select(argNames...)
 			if err != nil {
-				funcArg = NewArgument("", true)
+				funcArg = nil
 			} else {
-				funcArg = NewArgument(v.String(), false)
+				funcArg = v
 			}
 		} else {
-			funcArg = NewArgument(arg.name, false)
+			funcArg = jsonutil.NewStringVariable("", arg.name)
 		}
 		funcArgs = append(funcArgs, funcArg)
 
 	}
-	return Call(ident.name, funcArgs...)
+	s, err := Call(ident.name, funcArgs...)
+	if err != nil {
+		return "", fmt.Errorf("render %v(%v) err: %v", ident.name, join(funcArgs, ", "), err)
+	}
+	return s, nil
+}
+
+func join(vs []jsonutil.Variable, sep string) string {
+	ss := make([]string, 0, len(vs))
+	for _, v := range vs {
+		ss = append(ss, v.String())
+	}
+	return strings.Join(ss, sep)
 }

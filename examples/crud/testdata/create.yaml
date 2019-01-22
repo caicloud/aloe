@@ -13,15 +13,15 @@ flow:
   response:
     statusCode: 201
   definitions:
-  - name: "testProduct"
-  - name: "testProductId"
+  - name: "newProduct"
+  - name: "newProductId"
     selector:
     - "id"
 - description: "Verify product created"
   request:
-    api: GET /products/%{testProductId}
+    api: GET /products/%{newProductId}
     headers:
       "Content-Type": "application/json"
   response:
     statusCode: 200
-    body: "%{ testProduct }"
+    body: "%{ newProduct }"
