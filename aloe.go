@@ -8,6 +8,7 @@ import (
 	"github.com/caicloud/aloe/config"
 	"github.com/caicloud/aloe/framework"
 	"github.com/caicloud/aloe/preset"
+	glogutil "github.com/caicloud/aloe/utils/glog"
 )
 
 var f framework.Framework
@@ -20,6 +21,7 @@ func assertAloeInit() {
 
 // Init inits framework
 func Init(defaultConfig *config.Config) {
+	glogutil.ChangeGlogFlag()
 	c := config.Config{}
 	if err := c.ParseFlags(flag.CommandLine, "aloe", defaultConfig); err != nil {
 		panic(err)
