@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -31,6 +32,10 @@ type Framework interface {
 	// RegisterPresetter registers presetter of framework
 	RegisterPresetter(ps ...preset.Presetter) error
 
+	// CustomizeClient use custom client to replace default http client
+	// in framework
+	CustomizeClient(name string, c *http.Client)
+
 	// Run will run the framework
 	Run(t *testing.T)
 }
@@ -43,7 +48,7 @@ func NewFramework(c *config.Config) Framework {
 
 	gf := &genericFramework{
 		dataDirs: nil,
-		client:   roundtrip.NewClient(),
+		client:   roundtrip.NewClient(http.DefaultClient),
 		cleaners: map[string]cleaner.Cleaner{},
 		presetters: map[string]preset.Presetter{
 			reqHeader.Name():  reqHeader,
@@ -88,6 +93,12 @@ func (gf *genericFramework) Env(key, value string) error {
 	}
 	gf.adam.Variables.Set(key, jsonutil.NewStringVariable(key, value))
 	return nil
+}
+
+// CustomizeClient implements Framework interface
+// TODO(liubog2008): support multiple custom client config
+func (gf *genericFramework) CustomizeClient(name string, c *http.Client) {
+	gf.client = roundtrip.NewClient(c)
 }
 
 // AppendDataDirs implements Framework interface
