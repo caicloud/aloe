@@ -2,6 +2,7 @@ package aloe
 
 import (
 	"flag"
+	"net/http"
 	"testing"
 
 	"github.com/caicloud/aloe/cleaner"
@@ -57,4 +58,10 @@ func RegisterPresetter(ps ...preset.Presetter) error {
 func RegisterCleaner(cs ...cleaner.Cleaner) error {
 	assertAloeInit()
 	return f.RegisterCleaner(cs...)
+}
+
+// CustomizeClient config http client of default framework
+func CustomizeClient(name string, client *http.Client) {
+	assertAloeInit()
+	return f.CustomizeClient(name, client)
 }
