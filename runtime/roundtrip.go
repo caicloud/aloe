@@ -52,6 +52,10 @@ type Request struct {
 	// Path defines http request path
 	Path string
 
+	// PathTemplate defines template of path
+	// call fmt.Sprintf(PathTemplate, path) to generate real API path
+	PathTemplate string
+
 	// Headers defines http request header
 	Headers map[string]string
 

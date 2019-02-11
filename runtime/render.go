@@ -103,7 +103,11 @@ func renderRequest(ctx *Context, runtimereq *Request, req *types.Request) error 
 		}
 		method, path := splitMethodAndPath(api)
 		runtimereq.Method = method
-		runtimereq.Path = path
+		if runtimereq.PathTemplate != "" {
+			runtimereq.Path = fmt.Sprintf(runtimereq.PathTemplate, path)
+		} else {
+			runtimereq.Path = path
+		}
 	}
 	if err := renderHeader(ctx, runtimereq.Headers, req.Headers); err != nil {
 		return err
