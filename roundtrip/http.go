@@ -15,9 +15,13 @@ type Client struct {
 
 // NewClient returns a client for roundtrip
 func NewClient(c *http.Client) *Client {
-	return &Client{
+	nc := &Client{
 		c: c,
 	}
+	if nc.c == nil {
+		nc.c = http.DefaultClient
+	}
+	return nc
 }
 
 func (c *Client) getURL(req *runtime.Request) string {
@@ -45,9 +49,6 @@ func (c *Client) doRequest(reqConf *runtime.Request) (*http.Response, error) {
 	}
 	for k, v := range reqConf.Headers {
 		req.Header.Set(k, v)
-	}
-
-	if rt.TLSConfig != nil {
 	}
 
 	return c.c.Do(req)
