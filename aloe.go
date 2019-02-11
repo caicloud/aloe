@@ -63,5 +63,5 @@ func RegisterCleaner(cs ...cleaner.Cleaner) error {
 // CustomizeClient config http client of default framework
 func CustomizeClient(name string, client *http.Client) {
 	assertAloeInit()
-	return f.CustomizeClient(name, client)
+	f.CustomizeClient(name, client)
 }
