@@ -3,7 +3,6 @@ package framework
 import (
 	"fmt"
 	"time"
-	"unicode"
 
 	"github.com/Knetic/govaluate"
 	"github.com/caicloud/aloe/roundtrip"
@@ -31,18 +30,6 @@ var (
 	// defaultInterval defines default interval of an async task checking
 	defaultInterval = 100 * time.Millisecond
 )
-
-// filter filters all variable keys but whose first char is upper
-func filter(key string) bool {
-	rs := []rune(key)
-	if len(rs) == 0 {
-		return true
-	}
-	if unicode.IsUpper(rs[0]) {
-		return false
-	}
-	return true
-}
 
 // iter: iter are variables defined in one flow
 // all: all are variables produced by all flow
