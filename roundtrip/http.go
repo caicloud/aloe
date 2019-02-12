@@ -14,10 +14,14 @@ type Client struct {
 }
 
 // NewClient returns a client for roundtrip
-func NewClient() *Client {
-	return &Client{
-		c: http.DefaultClient,
+func NewClient(c *http.Client) *Client {
+	nc := &Client{
+		c: c,
 	}
+	if nc.c == nil {
+		nc.c = http.DefaultClient
+	}
+	return nc
 }
 
 func (c *Client) getURL(req *runtime.Request) string {
