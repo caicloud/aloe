@@ -73,59 +73,6 @@ func TestValidateContext(t *testing.T) {
 			c:           nil,
 			expected:    fmt.Errorf("context is empty"),
 		},
-		{
-			description: "context has a tuple with a validator and a constructor",
-			c: &types.Context{
-				ValidatedFlow: []types.RoundTripTuple{
-					{
-						Validator: []types.RoundTrip{
-							types.RoundTrip{},
-						},
-						Constructor: []types.RoundTrip{
-							types.RoundTrip{},
-						},
-					},
-				},
-			},
-			expected: nil,
-		},
-		{
-			description: "context has a tuple without a validator",
-			c: &types.Context{
-				ValidatedFlow: []types.RoundTripTuple{
-					{
-						Constructor: []types.RoundTrip{
-							types.RoundTrip{},
-						},
-					},
-				},
-			},
-			expected: ErrorList{
-				fmt.Errorf("constructor and validator should not be empty"),
-			},
-		},
-		{
-			description: "context has a tuple without a constructor",
-			c: &types.Context{
-				ValidatedFlow: []types.RoundTripTuple{
-					{
-						Validator: []types.RoundTrip{
-							types.RoundTrip{},
-						},
-					},
-				},
-			},
-			expected: ErrorList{
-				fmt.Errorf("constructor and validator should not be empty"),
-			},
-		},
-		{
-			description: "context has no validated flow tuple",
-			c: &types.Context{
-				ValidatedFlow: []types.RoundTripTuple{},
-			},
-			expected: nil,
-		},
 	}
 	for _, c := range cases {
 		assert.Equal(t, c.expected, ValidateContext(c.c), c.description)

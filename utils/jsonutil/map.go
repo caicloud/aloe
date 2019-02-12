@@ -15,6 +15,8 @@ type VariableMap interface {
 	Set(s string, v Variable)
 	// Delete delete Variable from map
 	Delete(s string)
+	// Keys returns variable map keys
+	Keys() []string
 
 	// Copy copies and returns a new VariableMap
 	Copy() VariableMap
@@ -26,11 +28,17 @@ type VariableMap interface {
 type varMap struct {
 	name string
 	vars map[string]Variable
+	keys []string
 }
 
 // Name implements Variable interface
 func (m *varMap) Name() string {
 	return m.name
+}
+
+// Type implements Variable interface
+func (m *varMap) Type() JSONType {
+	return ObjectType
 }
 
 // String implements Variable interface
@@ -52,6 +60,12 @@ func (m *varMap) Select(selector ...string) (Variable, error) {
 	if !ok {
 		return nil, fmt.Errorf("can't select from json(%v) with selector %v", m, selector)
 	}
+	if v == nil {
+		if len(selector) == 1 {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("can't select from json(null) with selector %v", selector[1:])
+	}
 	return v.Select(selector[1:]...)
 }
 
@@ -67,11 +81,27 @@ func (m *varMap) Get(s string) (Variable, bool) {
 // Set implements VariableMap interface
 func (m *varMap) Set(s string, v Variable) {
 	m.vars[s] = v
+	m.keys = append(m.keys, s)
 }
 
 // Delete implements VariableMap interface
 func (m *varMap) Delete(s string) {
 	delete(m.vars, s)
+	index := -1
+	for i, k := range m.keys {
+		if k == s {
+			index = i
+			break
+		}
+	}
+	if index != -1 {
+		m.keys = append(m.keys[:index], m.keys[index+1:]...)
+	}
+}
+
+// Keys implements VariableMap interface
+func (m *varMap) Keys() []string {
+	return m.keys
 }
 
 // Copy implements VariableMap interface
@@ -94,8 +124,13 @@ func NewVariableMap(name string, vs map[string]Variable) VariableMap {
 	if vs == nil {
 		vs = map[string]Variable{}
 	}
+	keys := []string{}
+	for k := range vs {
+		keys = append(keys, k)
+	}
 	return &varMap{
 		name: name,
 		vars: vs,
+		keys: keys,
 	}
 }

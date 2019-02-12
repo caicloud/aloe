@@ -33,11 +33,6 @@ func ValidateContext(c *types.Context) error {
 		return fmt.Errorf("context is empty")
 	}
 	errList := ErrorList{}
-	for _, rt := range c.ValidatedFlow {
-		if len(rt.Constructor) == 0 || len(rt.Validator) == 0 {
-			errList = append(errList, fmt.Errorf("constructor and validator should not be empty"))
-		}
-	}
 	if len(errList) != 0 {
 		return errList
 	}

@@ -2,7 +2,7 @@ summary: "Try delete a product"
 flow:
 - description: "delete a product"
   request:
-    api: DELETE /products/%{testProductId}
+    api: DELETE /products/%{TestProductId.3}
     headers:
       "Content-Type": "application/json"
   response:

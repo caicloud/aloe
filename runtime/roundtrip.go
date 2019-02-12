@@ -84,19 +84,23 @@ type Response struct {
 	Interval time.Duration
 }
 
-// Definition defines variable definitions
-type Definition struct {
+// Var defines variable
+type Var struct {
 	// Name defines variable name
 	Name string
 
+	// Selector defines variable selector
+	Selector []string
+}
+
+// Definition defines variable definitions
+type Definition struct {
+	// Var defines Definition variable
+	Var
 	// Type defines variable from
 	// enum ["body", "status", "header"]
 	// default is body
 	Type DefinitionType
-
-	// Selector defines variable selector
-	// only used when type is body and header
-	Selector []string
 }
 
 // When defines roundtrip condition

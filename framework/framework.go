@@ -155,15 +155,10 @@ func (gf *genericFramework) walk(parent *runtime.Context, dir *data.Dir) func() 
 		// TODO(liubog2008): need to support concurrency
 		count := 0
 
-		var ctx runtime.Context
-		// patch defines variables produced by this context
-		patch := jsonutil.NewVariableMap("", nil)
-
-		for name, d := range dirs {
-			f := gf.walk(&ctx, &d)
-			summary := genSummary(name, d.Context.Summary)
-			ginkgo.Context(summary, f)
+		ctx := runtime.Context{
+			Parent: parent,
 		}
+
 		for name, c := range files {
 			summary := genSummary(name, c.Case.Summary)
 			f := gf.itFunc(&ctx, &c)
@@ -171,10 +166,23 @@ func (gf *genericFramework) walk(parent *runtime.Context, dir *data.Dir) func() 
 				ginkgo.It(summary, f)
 			}
 		}
+		for name, d := range dirs {
+			f := gf.walk(&ctx, &d)
+			summary := genSummary(name, d.Context.Summary)
+			ginkgo.Context(summary, f)
+		}
 
+		// for {
+		//   inner = parent + prevExports
+		//   exports = roundTrip(inner)
+		//   children = parent + exports
+		//   prevExports = exports
+
+		//   test(children)
+		// }
 		ginkgo.BeforeEach(func() {
 			// reconstruct children context
-			gomega.Expect(runtime.ReconstructChildContext(&ctx, parent, patch)).
+			gomega.Expect(runtime.ReconstructContext(&ctx)).
 				NotTo(gomega.HaveOccurred())
 
 			// render preset config
@@ -184,13 +192,19 @@ func (gf *genericFramework) walk(parent *runtime.Context, dir *data.Dir) func() 
 			gomega.Expect(gf.constructRoundTripTemplate(&ctx)).
 				NotTo(gomega.HaveOccurred())
 
-			gf.constructFlow(&ctx, patch, ctxConfig.Flow)
-		})
+			gf.constructFlow(&ctx, ctxConfig.Flow)
 
-		ginkgo.AfterEach(func() {
 			// render cleaner config
 			gomega.Expect(runtime.RenderCleaners(&ctx, ctxConfig.Cleaners)).
 				NotTo(gomega.HaveOccurred())
+
+			ginkgo.By(fmt.Sprintf("before context: %v", ctx.Variables))
+			gomega.Expect(runtime.RenderExports(&ctx, ctxConfig.Exports)).
+				NotTo(gomega.HaveOccurred())
+			ginkgo.By(fmt.Sprintf("after context: %v", ctx.Variables))
+		})
+
+		ginkgo.AfterEach(func() {
 
 			count++
 			for _, c := range ctx.Cleaners {
@@ -219,8 +233,9 @@ func (gf *genericFramework) itFunc(ctx *runtime.Context, file *data.File) func()
 		for _, rt := range c.Flow {
 			ginkgo.By(fmt.Sprintf("context: %v", ctx.Variables))
 			vs := gf.roundTrip(ctx, &rt)
-			_, err := jsonutil.Merge(ctx.Variables, jsonutil.ConflictOption, false, vs)
+			newVs, err := jsonutil.Merge(ctx.Variables, jsonutil.ConflictOption, false, vs)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			ctx.Variables = newVs
 		}
 	}
 }
