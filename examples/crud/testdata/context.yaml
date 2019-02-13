@@ -14,7 +14,7 @@ flow:
     args:
       hasCreate: "%{ exist(TestProductId, iterator) }"
   request:
-    api: GET /products/%{ select(TestProductId, iterator) }
+    api: "GET /products/%{ select(TestProductId, iterator) }"
   definitions:
   - name: "getStatus"
     type: status
@@ -52,4 +52,4 @@ exports:
 cleaners:
 - name: "product"
   args:
-    product: "%{TestProductId.0}"
+    product: "%{TestProductId.[0]}"

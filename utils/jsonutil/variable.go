@@ -282,3 +282,40 @@ func NewIntVariable(name string, value int64) Variable {
 		value: value,
 	}
 }
+
+type nullVar struct{}
+
+// Name implements Variable interface
+func (v *nullVar) Name() string {
+	return "null"
+}
+
+// Type implements Variable interface
+func (v *nullVar) Type() JSONType {
+	return NullType
+}
+
+// String implements Variable interface
+func (v *nullVar) String() string {
+	return "null"
+}
+
+// Unmarshal implements Variable interface
+func (v *nullVar) Unmarshal(obj interface{}) error {
+	return nil
+}
+
+// Select implements Variable interface
+func (v *nullVar) Select(selector ...string) (Variable, error) {
+	if len(selector) == 0 {
+		return v, nil
+	}
+	return nil, fmt.Errorf("can't select from json(%v) by selector %v", v, selector)
+}
+
+var null = nullVar{}
+
+// NewNullVariable returns a null variable
+func NewNullVariable() Variable {
+	return &null
+}

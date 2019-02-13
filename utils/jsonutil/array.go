@@ -43,6 +43,7 @@ func (arr *varArray) Type() JSONType {
 }
 
 // String implements Variable interface
+// NOTE(liubog2008): maybe change to json format
 func (arr *varArray) String() string {
 	return fmt.Sprint(arr.vars)
 }
@@ -58,8 +59,10 @@ func (arr *varArray) Select(selector ...string) (Variable, error) {
 		return arr, nil
 	}
 
-	// 3 is length of [0]
-	if len(selector[0]) < 3 {
+	// 3 is length of "[0]"
+	if len(selector[0]) < 3 ||
+		selector[0][0] != '[' ||
+		selector[0][len(selector[0])-1] != ']' {
 		return nil, fmt.Errorf("can't select from json(%v) with selector %v: missing []", arr, selector)
 	}
 
