@@ -9,6 +9,9 @@ type VariableMap interface {
 	// Variable is Variable interface
 	Variable
 
+	// Measurable defines Len function
+	Measurable
+
 	// Get gets Variable from map
 	Get(s string) (Variable, bool)
 	// Set sets Variable into map
@@ -67,6 +70,11 @@ func (m *varMap) Select(selector ...string) (Variable, error) {
 		return nil, fmt.Errorf("can't select from json(null) with selector %v", selector[1:])
 	}
 	return v.Select(selector[1:]...)
+}
+
+// Len implements Measurable interface
+func (m *varMap) Len() int {
+	return len(m.vars)
 }
 
 // Get implements VariableMap interface

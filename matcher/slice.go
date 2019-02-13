@@ -11,30 +11,21 @@ import (
 	"github.com/onsi/gomega/types"
 )
 
-//MatchSlice succeeds if every element of a slice matches the element matcher it maps to
-//through the id function, and every element matcher is matched.
-//  Expect([]string{"a", "b"}).To(MatchAllElements(idFn, matchers.Elements{
-//      "a": BeEqual("a"),
-//      "b": BeEqual("b"),
-//  })
+// Simplify element matcher
+// See https://github.com/onsi/gomega/blob/master/gstruct/elements.go
+
+// MatchSlice succeeds if every element of a slice matches the element matcher it maps to through the id function, and every element matcher is matched.
 func MatchSlice(elements Elements) types.GomegaMatcher {
-	m := &Matcher{
+	m := &SliceMatcher{
 		Elements: elements,
 	}
 	return m
 }
 
-//MatchElements succeeds if each element of a slice matches the element matcher it maps to
-//through the id function. It can ignore extra elements and/or missing elements.
-//  Expect([]string{"a", "c"}).To(MatchElements(idFn, IgnoreMissing|IgnoreExtra, matchers.Elements{
-//      "a": BeEqual("a")
-//      "b": BeEqual("b"),
-//  })
-
-// Matcher is a NestingMatcher that applies custom matchers to each element of a slice mapped
+// SliceMatcher is a NestingMatcher that applies custom matchers to each element of a slice mapped
 // by the Identifier function.
 // TODO: Extend this to work with arrays & maps (map the key) as well.
-type Matcher struct {
+type SliceMatcher struct {
 	// Matchers for each element.
 	Elements Elements
 
@@ -46,7 +37,7 @@ type Matcher struct {
 type Elements []types.GomegaMatcher
 
 // Match implements gomega.Matcher
-func (m *Matcher) Match(actual interface{}) (success bool, err error) {
+func (m *SliceMatcher) Match(actual interface{}) (success bool, err error) {
 	if reflect.TypeOf(actual).Kind() != reflect.Slice {
 		return false, fmt.Errorf("%v is type %T, expected slice", actual, actual)
 	}
@@ -58,7 +49,7 @@ func (m *Matcher) Match(actual interface{}) (success bool, err error) {
 	return true, nil
 }
 
-func (m *Matcher) matchElements(actual interface{}) (errs []error) {
+func (m *SliceMatcher) matchElements(actual interface{}) (errs []error) {
 	// Provide more useful error messages in the case of a panic.
 	defer func() {
 		if err := recover(); err != nil {
@@ -96,17 +87,17 @@ func (m *Matcher) matchElements(actual interface{}) (errs []error) {
 }
 
 // FailureMessage implements types.GomegaMatcher
-func (m *Matcher) FailureMessage(actual interface{}) (message string) {
+func (m *SliceMatcher) FailureMessage(actual interface{}) (message string) {
 	failure := errorsutil.AggregateError(m.failures)
 	return format.Message(actual, fmt.Sprintf("to match elements: %v", failure))
 }
 
 // NegatedFailureMessage implements types.GomegaMatcher
-func (m *Matcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (m *SliceMatcher) NegatedFailureMessage(actual interface{}) (message string) {
 	return format.Message(actual, "not to match elements")
 }
 
 // Failures returns failures of matcher
-func (m *Matcher) Failures() []error {
+func (m *SliceMatcher) Failures() []error {
 	return m.failures
 }

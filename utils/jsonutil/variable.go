@@ -32,6 +32,13 @@ const (
 	NullType JSONType = "null"
 )
 
+// Measurable defines interface to return object length
+type Measurable interface {
+	// Len returns variable length
+	// if variable can't be measured, return -1
+	Len() int
+}
+
 // Variable defines variable which can unmarshal to an object
 type Variable interface {
 	// Name returns variable name
@@ -141,6 +148,25 @@ func (v *variable) Select(selector ...string) (Variable, error) {
 	}
 	name := strings.Join(selector, ".")
 	return GetVariable(v.raw, name, selector...)
+}
+
+// Len implements Measurable interface
+func (v *variable) Len() int {
+	switch v.jsonType {
+	case ArrayType:
+		l, err := countArray(v.raw)
+		if err != nil {
+			return -1
+		}
+		return l
+	case ObjectType:
+		l, err := countObject(v.raw)
+		if err != nil {
+			return -1
+		}
+		return l
+	}
+	return -1
 }
 
 var bitSizes = map[reflect.Kind]int{

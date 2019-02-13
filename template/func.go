@@ -53,6 +53,11 @@ func Call(name string, args ...jsonutil.Variable) (string, error) {
 			return "", fmt.Errorf("second argument of select is nil")
 		}
 		return selectVar(args[0], args[1].String())
+	case Length:
+		if len(args) == 1 {
+			return length(args[0])
+		}
+		return "", fmt.Errorf("func len expected 1 arg, but received: %v", len(args))
 	default:
 		return "", fmt.Errorf("unknown function named %v", name)
 	}
