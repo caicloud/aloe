@@ -4,9 +4,9 @@ labels:
 flow:
 - description: "Get product inited in context.yaml"
   request:
-    api: "GET /products/%{testProductId.0}"
+    api: "GET /products/%{TestProductId.0}"
     headers:
       "Content-Type": "application/json"
   response:
     statusCode: 200
-    body: "%{testProduct.0}"
+    body: "%{TestProduct.0}"

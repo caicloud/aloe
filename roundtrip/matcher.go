@@ -89,19 +89,27 @@ type Response struct {
 	Err  error
 }
 
+func assertResponse(obj interface{}) (*http.Response, error) {
+	var resp *http.Response
+	switch inner := obj.(type) {
+	case *http.Response:
+		resp = inner
+	case *Response:
+		if inner.Err != nil {
+			return nil, inner.Err
+		}
+		resp = inner.Resp
+	default:
+		return nil, fmt.Errorf("%v is type %T, expected *http.Response or *roundtrip.Response", obj, obj)
+	}
+	return resp, nil
+}
+
 // Match implements gomegatypes.GomegaMatcher
 func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
-	var resp *http.Response
-	switch obj := actual.(type) {
-	case *http.Response:
-		resp = obj
-	case *Response:
-		if obj.Err != nil {
-			return false, obj.Err
-		}
-		resp = obj.Resp
-	default:
-		return false, fmt.Errorf("%v is type %T, expected *http.Response or *roundtrip.Response", actual, actual)
+	resp, err := assertResponse(actual)
+	if err != nil {
+		return false, err
 	}
 	defer close.Close(resp.Body)
 

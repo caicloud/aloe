@@ -21,25 +21,9 @@ type Context struct {
 	// Flow will be called to construct context
 	Flow []RoundTrip `json:"flow,omitempty"`
 
-	// ValidatedFlow defines flow with validator
-	ValidatedFlow []RoundTripTuple `json:"validatedFlow,omitempty"`
+	// Exports defines variables which can be access by children
+	Exports []Var `json:"exports,omitempty"`
 
 	// Cleaners defines cleaner of the context
 	Cleaners []CleanerConfig `json:"cleaners,omitempty"`
-}
-
-// RoundTripTuple defines a tuple of round trips
-// It used to construct context and validate it
-// Each case will try to validate the context, if false
-// constructor will be called
-type RoundTripTuple struct {
-	// Constructor defines constructor roundtrip of context
-	// Normally constructor will construct the context
-	Constructor []RoundTrip `json:"constructor,omitempty"`
-
-	// Validator defines validator of context
-	// If constructor is failed, validator can be used to
-	// ignore the error
-	// Normally it used to assert that context is "clean"
-	Validator []RoundTrip `json:"validator,omitempty"`
 }

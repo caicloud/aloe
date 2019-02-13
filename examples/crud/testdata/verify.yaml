@@ -1,6 +1,6 @@
 summary: "Try verify nested context is clean"
 flow:
-- description: "Get product inited in _context.yaml"
+- description: "Get product inited in context.yaml"
   request:
     api: GET /products/10
     headers:

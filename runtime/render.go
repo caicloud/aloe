@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"github.com/caicloud/aloe/types"
+	"github.com/caicloud/aloe/utils/jsonutil"
+	"github.com/onsi/ginkgo"
 )
 
 // RenderPresetters render preset config with current context
@@ -84,6 +86,41 @@ func RenderRoundTrip(ctx *Context, rtc *types.RoundTrip) (*RoundTrip, error) {
 	return rt, nil
 }
 
+// RenderExports render export variables
+func RenderExports(ctx *Context, exports []types.Var) error {
+	vs := jsonutil.NewVariableMap("", nil)
+	for _, exportConf := range exports {
+		export := Var{}
+		if err := renderVar(ctx, &exportConf, &export); err != nil {
+			return err
+		}
+		v, err := ctx.Variables.Select(export.Selector...)
+		if err != nil {
+			return fmt.Errorf("can't export var %v: %v", export.Name, err)
+		}
+		if _, ok := vs.Get(export.Name); ok {
+			return fmt.Errorf("can't export var %v twice", export.Name)
+		}
+		vs.Set(export.Name, v)
+	}
+
+	ginkgo.By(fmt.Sprintf("exports: %v", ctx.Exports))
+	newExports, err := jsonutil.Merge(ctx.Exports, jsonutil.OverwriteOption, false, vs)
+	if err != nil {
+		return err
+	}
+	ctx.Exports = newExports
+	ginkgo.By(fmt.Sprintf("exports: %v", ctx.Exports))
+	// reconstruct ctx variable
+	newVs, err := jsonutil.Merge(ctx.Parent.Variables, jsonutil.ConflictOption, true, ctx.Exports)
+	if err != nil {
+		return err
+	}
+	ctx.Variables = newVs
+	ginkgo.By(fmt.Sprintf("exports: %v", ctx.Exports))
+	return nil
+}
+
 func splitMethodAndPath(api string) (string, string) {
 	s := strings.SplitN(api, " ", 2)
 	return strings.TrimSpace(s[0]), strings.TrimSpace(s[1])
@@ -152,6 +189,19 @@ func renderResponse(ctx *Context, resp *Response, respConf *types.Response) erro
 	return nil
 }
 
+func renderVar(ctx *Context, vc *types.Var, v *Var) error {
+	v.Name = vc.Name
+	for _, st := range vc.Selector {
+		s, err := st.Render(ctx.Variables)
+		if err != nil {
+			return err
+		}
+		v.Selector = append(v.Selector, s)
+	}
+	return nil
+
+}
+
 func renderDefinition(ctx *Context, dcs []types.Definition) ([]Definition, error) {
 	if len(dcs) == 0 {
 		return nil, nil
@@ -159,9 +209,7 @@ func renderDefinition(ctx *Context, dcs []types.Definition) ([]Definition, error
 	ds := make([]Definition, 0, len(dcs))
 
 	for _, dc := range dcs {
-		d := Definition{
-			Name: dc.Name,
-		}
+		d := Definition{}
 		switch dc.Type {
 		case "body", "header", "status":
 			d.Type = DefinitionType(dc.Type)
@@ -170,13 +218,10 @@ func renderDefinition(ctx *Context, dcs []types.Definition) ([]Definition, error
 		default:
 			return nil, fmt.Errorf("can't understand definition type %v: only [body, header, status] is allowed", dc.Type)
 		}
-		for _, st := range dc.Selector {
-			s, err := st.Render(ctx.Variables)
-			if err != nil {
-				return nil, err
-			}
-			d.Selector = append(d.Selector, s)
+		if err := renderVar(ctx, &dc.Var, &d.Var); err != nil {
+			return nil, fmt.Errorf("can't render var in definition: %v", err)
 		}
+
 		ds = append(ds, d)
 	}
 	return ds, nil

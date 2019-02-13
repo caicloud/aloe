@@ -37,29 +37,27 @@ var (
 // current: current are variables now
 // parent: parent are variables of parent context
 // iter should be merge into all
-func mergeVariable(parent, current, patch, all, iter jsonutil.VariableMap) error {
-	// roundtrip should not redefine
-	if _, err := jsonutil.Merge(all, jsonutil.ConflictOption, false, iter); err != nil {
-		return err
-	}
-	if _, err := jsonutil.Merge(patch, jsonutil.OverwriteOption, false, iter); err != nil {
-		return err
-	}
-	conflict := jsonutil.IsConflict(parent, patch)
+func mergeVariable(parent, current, all, iter jsonutil.VariableMap) error {
+	// roundtrip should not redefine variables which have been defined in parent context
+	conflict := jsonutil.IsConflict(parent, iter)
 	if conflict {
 		return fmt.Errorf("context define variables which have been defined in parents")
 	}
-	if _, err := jsonutil.Merge(current, jsonutil.OverwriteOption, false, iter); err != nil {
+	// roundtrip should not redefine variables which have been defined in previous roundtrips
+	if _, err := jsonutil.Merge(all, jsonutil.ConflictOption, false, iter); err != nil {
+		return err
+	}
+	if _, err := jsonutil.Merge(current, jsonutil.DeepOverwriteOption, false, iter); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (gf *genericFramework) constructFlow(ctx *runtime.Context, patch jsonutil.VariableMap, flow []types.RoundTrip) {
+func (gf *genericFramework) constructFlow(ctx *runtime.Context, flow []types.RoundTrip) {
 	flowVs := jsonutil.NewVariableMap("", nil)
 	for _, rt := range flow {
 		vs := gf.roundTrip(ctx, &rt)
-		err := mergeVariable(ctx.Parent.Variables, ctx.Variables, patch, flowVs, vs)
+		err := mergeVariable(ctx.Parent.Variables, ctx.Variables, flowVs, vs)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}
 }
@@ -178,11 +176,19 @@ func (gf *genericFramework) roundTrip(ctx *runtime.Context, rt *types.RoundTrip)
 		return gf.onceRoundTrip(ctx, rt, -1)
 	}
 	vars := jsonutil.NewVariableMap("", nil)
+	empty := jsonutil.NewVariableMap("", nil)
+	for _, def := range rt.Definitions {
+		empty.Set(def.Name, nil)
+	}
+
 	for i := 0; i < rt.Loop; i++ {
 		vs := gf.onceRoundTrip(ctx, rt, i)
-		_, err := jsonutil.Merge(vars, jsonutil.CombineOption, false, vs)
-
+		if vs == nil {
+			vs = empty
+		}
+		newVars, err := jsonutil.Merge(vars, jsonutil.CombineOption, false, vs)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		vars = newVars
 	}
 	return vars
 }

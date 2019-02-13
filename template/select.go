@@ -22,5 +22,8 @@ func selectVar(v jsonutil.Variable, selector string) (string, error) {
 	if err != nil {
 		return "", nil
 	}
+	if res == nil {
+		return "", nil
+	}
 	return res.String(), nil
 }

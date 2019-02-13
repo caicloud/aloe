@@ -16,6 +16,12 @@ flow:
   - name: "product"
     selector:
     - "id"
+
+exports:
+- name: "Product"
+  selector:
+  - "product"
+
 cleaners:
 - name: "product"
   args:

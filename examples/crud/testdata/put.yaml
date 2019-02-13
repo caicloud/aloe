@@ -2,12 +2,12 @@ summary: "Try update a product"
 flow:
 - description: "Update a product "
   request:
-    api: PUT /products/%{ testProductId.0 }
+    api: PUT /products/%{ TestProductId.0 }
     headers:
       "Content-Type": "application/json"
     body: |
       {
-        "id": "%{ testProductId.0 }",
+        "id": "%{ TestProductId.0 }",
         "title": "test"
       }
   response:

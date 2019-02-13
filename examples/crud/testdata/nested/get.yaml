@@ -2,7 +2,7 @@ summary: "Try get a product in nested context"
 flow:
 - description: "Get product inited in context.yaml"
   request:
-    api: GET /products/%{product}
+    api: GET /products/%{Product}
     headers:
       "Content-Type": "application/json"
   response:

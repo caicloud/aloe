@@ -71,20 +71,6 @@ type Response struct {
 	Eventually *Eventually `json:"eventually,omitempty"`
 }
 
-// Definition defines new variable from response
-type Definition struct {
-	// Name defines variable name
-	Name string `json:"name"`
-
-	// Type defines variable from
-	// enum ["body", "status", "header"]
-	// default is body
-	Type string `json:"type,omitempty"`
-
-	// Selector select variable value from response
-	Selector []Template `json:"selector"`
-}
-
 // When defines round trip condition
 type When struct {
 	// Expr defines condition expression

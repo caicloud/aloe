@@ -42,6 +42,9 @@ type Variable interface {
 	String() string
 	// Select get subpath of variable
 	Select(selector ...string) (Variable, error)
+
+	// Type returns variable type
+	Type() JSONType
 }
 
 // variable is a snippet of json string
@@ -59,6 +62,11 @@ type variable struct {
 // Name returns variable name
 func (v *variable) Name() string {
 	return v.name
+}
+
+// Type returns variable type
+func (v *variable) Type() JSONType {
+	return v.jsonType
 }
 
 // String returns variable value
@@ -164,6 +172,11 @@ func (v *stringVar) Name() string {
 	return v.name
 }
 
+// Type implements Variable interface
+func (v *stringVar) Type() JSONType {
+	return StringType
+}
+
 // String implements Variable interface
 func (v *stringVar) String() string {
 	return v.value
@@ -204,6 +217,11 @@ type intVar struct {
 // Name implements Variable interface
 func (v *intVar) Name() string {
 	return v.name
+}
+
+// Type implements Variable interface
+func (v *intVar) Type() JSONType {
+	return NumberType
 }
 
 // String implements Variable interface

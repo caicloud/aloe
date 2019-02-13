@@ -12,9 +12,9 @@ flow:
   when:
     expr: "hasCreate == 'true'"
     args:
-      hasCreate: "%{ exist(testProductId, iterator) }"
+      hasCreate: "%{ exist(TestProductId, iterator) }"
   request:
-    api: GET /products/%{ select(testProductId, iterator) }
+    api: GET /products/%{ select(TestProductId, iterator) }
   definitions:
   - name: "getStatus"
     type: status
@@ -24,7 +24,7 @@ flow:
   when:
     expr: "hasCreate == 'false' || status == '404'"
     args:
-      hasCreate: "%{ exist(testProductId, iterator) }"
+      hasCreate: "%{ exist(TestProductId, iterator) }"
       status: "%{ select(getStatus, iterator) }"
   request:
     api: POST /products
@@ -36,11 +36,20 @@ flow:
   response:
     statusCode: 201
   definitions:
-  - name: "testProduct"
-  - name: "testProductId"
+  - name: "TestProduct"
+  - name: "TestProductId"
     selector:
     - "id"
+
+exports:
+- name: "TestProduct"
+  selector:
+  - TestProduct
+- name: "TestProductId"
+  selector:
+  - TestProductId
+
 cleaners:
 - name: "product"
   args:
-    product: "%{testProductId.0}"
+    product: "%{TestProductId.0}"

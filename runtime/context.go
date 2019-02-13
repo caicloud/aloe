@@ -15,6 +15,9 @@ type Context struct {
 	// Variables defines variables the context has
 	Variables jsonutil.VariableMap
 
+	// Exports defines variables exported by this context only
+	Exports jsonutil.VariableMap
+
 	// Presetters defines the presetters of context
 	Presetters []Presetter
 
