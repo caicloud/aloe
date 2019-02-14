@@ -9,6 +9,7 @@ import (
 	"github.com/onsi/gomega/types"
 )
 
+// MatchSpecial combine multiple special matchers into one matcher
 func MatchSpecial(ms map[string]types.GomegaMatcher) types.GomegaMatcher {
 	return &SpecialMatcher{
 		ms: ms,
