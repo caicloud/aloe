@@ -300,11 +300,11 @@ func TestRender(t *testing.T) {
 			&template{
 				identitors: map[int]identitor{
 					1: identitor{
-						name:  "cluster.items.0",
+						name:  "cluster.items.[0]",
 						isVar: true,
 					},
 					2: identitor{
-						name:  "partition.0",
+						name:  "partition.[0]",
 						isVar: true,
 					},
 				},
