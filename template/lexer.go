@@ -202,13 +202,13 @@ func (lr *Lexer) nextArg() ([]rune, Token, error) {
 
 func (lr *Lexer) nextName() ([]rune, error) {
 	first := lr.buf[lr.offset]
-	if !unicode.IsLetter(first) && first != '_' {
-		return nil, fmt.Errorf("variable name or function name should begin with unicode letter or '_'")
+	if !unicode.IsLetter(first) && first != '_' && first != '[' {
+		return nil, fmt.Errorf("variable name or function name should begin with unicode letter or '_' or '[', actual: %v", string(first))
 	}
 	lr.offset++
 	token := []rune{first}
 	for i, c := range lr.buf[lr.offset:] {
-		if unicode.IsLetter(c) || c == '_' || c == '.' || unicode.IsDigit(c) {
+		if unicode.IsLetter(c) || c == '_' || c == '[' || c == ']' || c == '.' || unicode.IsDigit(c) {
 			token = append(token, c)
 		} else {
 			lr.offset += i
@@ -216,5 +216,4 @@ func (lr *Lexer) nextName() ([]rune, error) {
 		}
 	}
 	return token, nil
-
 }

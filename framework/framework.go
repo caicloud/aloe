@@ -198,10 +198,8 @@ func (gf *genericFramework) walk(parent *runtime.Context, dir *data.Dir) func() 
 			gomega.Expect(runtime.RenderCleaners(&ctx, ctxConfig.Cleaners)).
 				NotTo(gomega.HaveOccurred())
 
-			ginkgo.By(fmt.Sprintf("before context: %v", ctx.Variables))
 			gomega.Expect(runtime.RenderExports(&ctx, ctxConfig.Exports)).
 				NotTo(gomega.HaveOccurred())
-			ginkgo.By(fmt.Sprintf("after context: %v", ctx.Variables))
 		})
 
 		ginkgo.AfterEach(func() {
@@ -230,8 +228,11 @@ func (gf *genericFramework) itFunc(ctx *runtime.Context, file *data.File) func()
 		return nil
 	}
 	return func() {
+		ginkgo.By(fmt.Sprintf("%s with context:\n%v",
+			c.Summary,
+			ctx.Variables,
+		))
 		for _, rt := range c.Flow {
-			ginkgo.By(fmt.Sprintf("context: %v", ctx.Variables))
 			vs := gf.roundTrip(ctx, &rt)
 			newVs, err := jsonutil.Merge(ctx.Variables, jsonutil.ConflictOption, false, vs)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())

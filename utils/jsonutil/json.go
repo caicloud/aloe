@@ -6,55 +6,20 @@ import (
 	"github.com/buger/jsonparser"
 )
 
-const (
-	// LenSelector used to select length of array or object
-	LenSelector = "#"
-)
-
 // GetVariable returns a variable from raw json
 func GetVariable(rawJSON []byte, name string, selector ...string) (Variable, error) {
-	vSelector, selectLen := selector, false
-
-	if len(selector) != 0 && selector[len(selector)-1] == LenSelector {
-		vSelector = selector[:len(selector)-1]
-		selectLen = true
-	}
-
-	v, dt, _, err := jsonparser.Get(rawJSON, vSelector...)
+	v, dt, _, err := jsonparser.Get(rawJSON, selector...)
 	if err != nil {
 		return nil, getVariableErrorf(name, string(rawJSON), selector, err)
 	}
 	t := convert(dt)
-	switch t {
-	case ArrayType:
-		if !selectLen {
-			break
-		}
-		l, err := countArray(v)
-		if err != nil {
-			return nil, getVariableErrorf(name, string(rawJSON), selector, err)
-		}
-		return NewIntVariable(name, int64(l)), nil
-	case ObjectType:
-		if !selectLen {
-			break
-		}
-		l, err := countObject(v)
-		if err != nil {
-			return nil, getVariableErrorf(name, string(rawJSON), selector, err)
-		}
-		return NewIntVariable(name, int64(l)), nil
-	case "":
+	if t == "" {
 		return nil, getVariableErrorf(name, string(rawJSON), selector, fmt.Errorf("unknown type"))
-	default:
-		if selectLen {
-			return nil, getVariableErrorf(name, string(rawJSON), selector, fmt.Errorf("can't select len(#) for %v", t))
-		}
 	}
 	return &variable{
 		raw:      v,
 		name:     name,
-		jsonType: convert(dt),
+		jsonType: t,
 	}, nil
 }
 

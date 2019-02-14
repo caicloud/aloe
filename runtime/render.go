@@ -6,7 +6,6 @@ import (
 
 	"github.com/caicloud/aloe/types"
 	"github.com/caicloud/aloe/utils/jsonutil"
-	"github.com/onsi/ginkgo"
 )
 
 // RenderPresetters render preset config with current context
@@ -104,20 +103,17 @@ func RenderExports(ctx *Context, exports []types.Var) error {
 		vs.Set(export.Name, v)
 	}
 
-	ginkgo.By(fmt.Sprintf("exports: %v", ctx.Exports))
 	newExports, err := jsonutil.Merge(ctx.Exports, jsonutil.OverwriteOption, false, vs)
 	if err != nil {
 		return err
 	}
 	ctx.Exports = newExports
-	ginkgo.By(fmt.Sprintf("exports: %v", ctx.Exports))
 	// reconstruct ctx variable
 	newVs, err := jsonutil.Merge(ctx.Parent.Variables, jsonutil.ConflictOption, true, ctx.Exports)
 	if err != nil {
 		return err
 	}
 	ctx.Variables = newVs
-	ginkgo.By(fmt.Sprintf("exports: %v", ctx.Exports))
 	return nil
 }
 

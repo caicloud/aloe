@@ -10,10 +10,11 @@ type VariableArray interface {
 	// Variable is Variable interface
 	Variable
 
+	// Measurable defines Len function
+	Measurable
+
 	// Append append Variable into array
 	Append(v Variable)
-	// Len returns array length
-	Len() int
 	// Get gets Variable from array
 	Get(i int) Variable
 	// Set sets Variable into array
@@ -42,6 +43,7 @@ func (arr *varArray) Type() JSONType {
 }
 
 // String implements Variable interface
+// NOTE(liubog2008): maybe change to json format
 func (arr *varArray) String() string {
 	return fmt.Sprint(arr.vars)
 }
@@ -51,17 +53,20 @@ func (arr *varArray) Unmarshal(obj interface{}) error {
 	return fmt.Errorf("Not Supported")
 }
 
+// Select implements Variable interface
 func (arr *varArray) Select(selector ...string) (Variable, error) {
 	if len(selector) == 0 {
 		return arr, nil
 	}
-	if selector[0] == LenSelector {
-		if len(selector) > 1 {
-			return nil, fmt.Errorf("can't select from json(%v) with selector %v: %v", arr, selector, "nothing can be after #")
-		}
-		return NewIntVariable("", int64(arr.Len())), nil
+
+	// 3 is length of "[0]"
+	if len(selector[0]) < 3 ||
+		selector[0][0] != '[' ||
+		selector[0][len(selector[0])-1] != ']' {
+		return nil, fmt.Errorf("can't select from json(%v) with selector %v: missing []", arr, selector)
 	}
-	index, err := strconv.Atoi(selector[0])
+
+	index, err := strconv.Atoi(selector[0][1 : len(selector[0])-1])
 	if err != nil {
 		return nil, fmt.Errorf("can't select from json(%v) with selector %v: %v", arr, selector, err)
 	}

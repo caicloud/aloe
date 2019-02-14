@@ -173,7 +173,11 @@ func (t *template) renderScript(ident *identitor, index int, vs jsonutil.Variabl
 func join(vs []jsonutil.Variable, sep string) string {
 	ss := make([]string, 0, len(vs))
 	for _, v := range vs {
-		ss = append(ss, v.String())
+		s := ""
+		if v != nil {
+			s = v.String()
+		}
+		ss = append(ss, s)
 	}
 	return strings.Join(ss, sep)
 }

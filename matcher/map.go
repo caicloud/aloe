@@ -12,12 +12,10 @@ import (
 	"github.com/onsi/gomega/types"
 )
 
-//MatchMap succeeds if every field of a struct matches the field matcher associated with
-//it, and every element matcher is matched.
-//  Expect([]string{"a", "b"}).To(MatchAllFields(idFn, gstruct.Fields{
-//      "a": BeEqual("a"),
-//      "b": BeEqual("b"),
-//  })
+// Check exists
+// See https://github.com/onsi/gomega/blob/master/gstruct/fields.go
+
+// MatchMap succeeds if every field of a struct matches the field matcher associated with it, and every element matcher is matched.
 func MatchMap(fields Fields, exists map[string]bool) types.GomegaMatcher {
 	m := &FieldsMatcher{
 		Fields: fields,

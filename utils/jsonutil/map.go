@@ -2,12 +2,17 @@ package jsonutil
 
 import (
 	"fmt"
+	"strings"
+	"unsafe"
 )
 
 // VariableMap defines variable map
 type VariableMap interface {
 	// Variable is Variable interface
 	Variable
+
+	// Measurable defines Len function
+	Measurable
 
 	// Get gets Variable from map
 	Get(s string) (Variable, bool)
@@ -42,8 +47,19 @@ func (m *varMap) Type() JSONType {
 }
 
 // String implements Variable interface
+// NOTE(liubog2008): maybe change to json format
 func (m *varMap) String() string {
-	return fmt.Sprint(m.vars)
+	bs := []byte{}
+	for k, v := range m.vars {
+		bs = append(bs, '\t')
+		bs = append(bs, k...)
+		bs = append(bs, ':')
+		bs = append(bs, ' ')
+		s := v.String()
+		bs = append(bs, strings.Replace(s, "\n", "\n\t\t", -1)...)
+		bs = append(bs, '\n')
+	}
+	return *(*string)(unsafe.Pointer(&bs))
 }
 
 // Unmarshal implements Variable interface
@@ -67,6 +83,11 @@ func (m *varMap) Select(selector ...string) (Variable, error) {
 		return nil, fmt.Errorf("can't select from json(null) with selector %v", selector[1:])
 	}
 	return v.Select(selector[1:]...)
+}
+
+// Len implements Measurable interface
+func (m *varMap) Len() int {
+	return len(m.vars)
 }
 
 // Get implements VariableMap interface

@@ -32,6 +32,13 @@ const (
 	NullType JSONType = "null"
 )
 
+// Measurable defines interface to return object length
+type Measurable interface {
+	// Len returns variable length
+	// if variable can't be measured, return -1
+	Len() int
+}
+
 // Variable defines variable which can unmarshal to an object
 type Variable interface {
 	// Name returns variable name
@@ -141,6 +148,25 @@ func (v *variable) Select(selector ...string) (Variable, error) {
 	}
 	name := strings.Join(selector, ".")
 	return GetVariable(v.raw, name, selector...)
+}
+
+// Len implements Measurable interface
+func (v *variable) Len() int {
+	switch v.jsonType {
+	case ArrayType:
+		l, err := countArray(v.raw)
+		if err != nil {
+			return -1
+		}
+		return l
+	case ObjectType:
+		l, err := countObject(v.raw)
+		if err != nil {
+			return -1
+		}
+		return l
+	}
+	return -1
 }
 
 var bitSizes = map[reflect.Kind]int{
@@ -255,4 +281,41 @@ func NewIntVariable(name string, value int64) Variable {
 		name:  name,
 		value: value,
 	}
+}
+
+type nullVar struct{}
+
+// Name implements Variable interface
+func (v *nullVar) Name() string {
+	return "null"
+}
+
+// Type implements Variable interface
+func (v *nullVar) Type() JSONType {
+	return NullType
+}
+
+// String implements Variable interface
+func (v *nullVar) String() string {
+	return "null"
+}
+
+// Unmarshal implements Variable interface
+func (v *nullVar) Unmarshal(obj interface{}) error {
+	return nil
+}
+
+// Select implements Variable interface
+func (v *nullVar) Select(selector ...string) (Variable, error) {
+	if len(selector) == 0 {
+		return v, nil
+	}
+	return nil, fmt.Errorf("can't select from json(%v) by selector %v", v, selector)
+}
+
+var null = nullVar{}
+
+// NewNullVariable returns a null variable
+func NewNullVariable() Variable {
+	return &null
 }

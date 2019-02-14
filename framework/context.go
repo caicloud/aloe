@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Knetic/govaluate"
@@ -20,7 +21,7 @@ const (
 
 // Iterate set iterator variable in context variable
 func Iterate(ctx *runtime.Context, iter int) {
-	ctx.Variables.Set(IteratorName, jsonutil.NewIntVariable(IteratorName, int64(iter)))
+	ctx.Variables.Set(IteratorName, jsonutil.NewStringVariable(IteratorName, "["+strconv.Itoa(iter)+"]"))
 }
 
 var (
@@ -95,10 +96,6 @@ func (gf *genericFramework) onceRoundTrip(ctx *runtime.Context, originRoundTrip 
 	rt, err := runtime.RenderRoundTrip(ctx, originRoundTrip)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	ginkgo.By(fmt.Sprintf("%s: %v",
-		originRoundTrip.Description,
-		ctx.Variables,
-	))
 	ginkgo.By(fmt.Sprintf("%s: %s %s://%s%s",
 		originRoundTrip.Description,
 		rt.Request.Method,
@@ -165,7 +162,7 @@ func eval(ctx *runtime.Context, when *runtime.When) (bool, error) {
 		return false, fmt.Errorf("when condition MUST be eval as a bool")
 	}
 	if !b {
-		ginkgo.By(fmt.Sprintf("condition `%v`, args: %v, eval result is false", when.Expr, ps))
+		ginkgo.By(fmt.Sprintf("skip by condition `%v`, args: %v", when.Expr, ps))
 	}
 	return b, nil
 

@@ -46,13 +46,31 @@ func Call(name string, args ...jsonutil.Variable) (string, error) {
 		return "", fmt.Errorf("func exist expected 1 or 2 arg, but received: %v", len(args))
 
 	case Select:
-		if len(args) != 2 {
-			return "", fmt.Errorf("func select expected 2 arg, but received: %v", len(args))
+		if len(args) < 2 || len(args) > 3 {
+			return "", fmt.Errorf("func select expected 2 or 3 args, but received: %v", len(args))
 		}
 		if args[1] == nil {
 			return "", fmt.Errorf("second argument of select is nil")
 		}
-		return selectVar(args[0], args[1].String())
+		ignore := false
+		if len(args) == 3 {
+			if args[2] == nil {
+				return "", fmt.Errorf("third argument of select is nil")
+			}
+			ignoreStr := args[2].String()
+			b, err := strconv.ParseBool(ignoreStr)
+			if err != nil {
+				return "", fmt.Errorf("third argument of select should be bool: %v", err)
+			}
+			ignore = b
+		}
+		return selectVar(args[0], args[1].String(), ignore)
+
+	case Length:
+		if len(args) == 1 {
+			return length(args[0])
+		}
+		return "", fmt.Errorf("func len expected 1 arg, but received: %v", len(args))
 	default:
 		return "", fmt.Errorf("unknown function named %v", name)
 	}

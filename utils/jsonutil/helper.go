@@ -93,10 +93,10 @@ func IsConflict(dst VariableMap, objs ...VariableMap) bool {
 }
 
 func deepOverwrite(dst, src Variable) Variable {
-	if dst == nil {
+	if dst == nil || dst.Type() == NullType {
 		return src
 	}
-	if src == nil {
+	if src == nil || src.Type() == NullType {
 		return dst
 	}
 	dstvm, dstok := dst.(VariableMap)
