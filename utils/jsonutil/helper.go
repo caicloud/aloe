@@ -83,6 +83,9 @@ func Merge(dst VariableMap, opt MergeOption, isNew bool, objs ...VariableMap) (V
 // IsConflict check whether objs are conflict with dst
 func IsConflict(dst VariableMap, objs ...VariableMap) bool {
 	for _, obj := range objs {
+		if obj == nil {
+			continue
+		}
 		for k := range obj.to() {
 			if _, ok := dst.Get(k); ok {
 				return true
