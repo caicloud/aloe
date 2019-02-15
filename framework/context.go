@@ -32,6 +32,31 @@ var (
 	defaultInterval = 100 * time.Millisecond
 )
 
+var (
+	evalFuncs = map[string]govaluate.ExpressionFunction{
+		"int": func(args ...interface{}) (interface{}, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("expected 1 arg, but received: %v", len(args))
+			}
+			l, err := strconv.ParseInt(args[0].(string), 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("can't convert %v to int", args[0])
+			}
+			return float64(l), nil
+		},
+		"bool": func(args ...interface{}) (interface{}, error) {
+			if len(args) != 1 {
+				return nil, fmt.Errorf("expected 1 arg, but received: %v", len(args))
+			}
+			b, err := strconv.ParseBool(args[0].(string))
+			if err != nil {
+				return nil, fmt.Errorf("can't convert %v to bool", args[0])
+			}
+			return b, nil
+		},
+	}
+)
+
 // iter: iter are variables defined in one flow
 // all: all are variables produced by all flow
 // patch: patch are variables produced by this context
@@ -133,7 +158,7 @@ func (gf *genericFramework) onceRoundTrip(ctx *runtime.Context, originRoundTrip 
 }
 
 func eval(ctx *runtime.Context, when *runtime.When) (bool, error) {
-	expression, err := govaluate.NewEvaluableExpression(when.Expr)
+	expression, err := govaluate.NewEvaluableExpressionWithFunctions(when.Expr, evalFuncs)
 	if err != nil {
 		return false, err
 	}
@@ -155,6 +180,7 @@ func eval(ctx *runtime.Context, when *runtime.When) (bool, error) {
 	}
 	result, err := expression.Evaluate(ps)
 	if err != nil {
+		ginkgo.By(fmt.Sprintf("failed by condition `%v`, args: %v, variables:\n%v", when.Expr, ps, ctx.Variables))
 		return false, err
 	}
 	b, ok := result.(bool)
