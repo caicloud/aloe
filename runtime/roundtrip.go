@@ -18,6 +18,9 @@ const (
 
 // RoundTripTemplate defines template of round trip
 type RoundTripTemplate struct {
+	// Client defines http client used by this roundtrip
+	Client string
+
 	// Request defines http request
 	Request Request
 
