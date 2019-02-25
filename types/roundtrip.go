@@ -13,6 +13,10 @@ type RoundTrip struct {
 	// Description describe the round trip
 	Description string `json:"description,omitempty"`
 
+	// Client defines http client used by this roundtrip
+	// if it's empty, default client will be used
+	Client string `json:"client,omitempty"`
+
 	// Loop defines RoundTrip loop times
 	// If it is > 1 , an iterator variable will be defined
 	// and all definitions will be defined as an array

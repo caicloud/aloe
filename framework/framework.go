@@ -48,7 +48,7 @@ func NewFramework(c *config.Config) Framework {
 
 	gf := &genericFramework{
 		dataDirs: nil,
-		client:   roundtrip.NewClient(http.DefaultClient),
+		client:   roundtrip.NewClientset(http.DefaultClient),
 		cleaners: map[string]cleaner.Cleaner{},
 		presetters: map[string]preset.Presetter{
 			reqHeader.Name():  reqHeader,
@@ -68,7 +68,7 @@ func NewFramework(c *config.Config) Framework {
 type genericFramework struct {
 	dataDirs []string
 
-	client *roundtrip.Client
+	client roundtrip.Clientset
 
 	cleaners map[string]cleaner.Cleaner
 
@@ -98,7 +98,7 @@ func (gf *genericFramework) Env(key, value string) error {
 // CustomizeClient implements Framework interface
 // TODO(liubog2008): support multiple custom client config
 func (gf *genericFramework) CustomizeClient(name string, c *http.Client) {
-	gf.client = roundtrip.NewClient(c)
+	gf.client.Set(name, c)
 }
 
 // AppendDataDirs implements Framework interface
