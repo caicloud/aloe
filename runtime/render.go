@@ -70,6 +70,9 @@ func RenderRoundTrip(ctx *Context, rtc *types.RoundTrip) (*RoundTrip, error) {
 	rt := &RoundTrip{
 		RoundTripTemplate: *cp,
 	}
+	if rtc.Client != "" {
+		rt.Client = rtc.Client
+	}
 	if err := renderRequest(ctx, &rt.Request, &rtc.Request); err != nil {
 		return nil, err
 	}
@@ -122,12 +125,30 @@ func splitMethodAndPath(api string) (string, string) {
 	return strings.TrimSpace(s[0]), strings.TrimSpace(s[1])
 }
 
-func renderRequest(ctx *Context, runtimereq *Request, req *types.Request) error {
-	if req.Host != "" {
-		runtimereq.Host = req.Host
+func isAbs(path string) bool {
+	if len(path) < 2 {
+		return false
 	}
-	if req.Scheme != "" {
-		runtimereq.Scheme = req.Scheme
+	if path[0] == '`' && path[len(path)-1] == '`' {
+		return true
+	}
+	return false
+}
+
+func renderRequest(ctx *Context, runtimereq *Request, req *types.Request) error {
+	if req.Host != nil {
+		host, err := req.Host.Render(ctx.Variables)
+		if err != nil {
+			return err
+		}
+		runtimereq.Host = host
+	}
+	if req.Scheme != nil {
+		scheme, err := req.Scheme.Render(ctx.Variables)
+		if err != nil {
+			return err
+		}
+		runtimereq.Scheme = scheme
 	}
 	if req.API != nil {
 		api, err := req.API.Render(ctx.Variables)
@@ -136,7 +157,9 @@ func renderRequest(ctx *Context, runtimereq *Request, req *types.Request) error 
 		}
 		method, path := splitMethodAndPath(api)
 		runtimereq.Method = method
-		if runtimereq.PathTemplate != "" {
+		if isAbs(path) {
+			runtimereq.Path = path[1 : len(path)-1]
+		} else if runtimereq.PathTemplate != "" {
 			runtimereq.Path = fmt.Sprintf(runtimereq.PathTemplate, path)
 		} else {
 			runtimereq.Path = path

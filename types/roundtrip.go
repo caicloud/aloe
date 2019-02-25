@@ -38,11 +38,11 @@ type RoundTrip struct {
 // Request defines a part template of http request
 type Request struct {
 	// Host defines request host
-	Host string `json:"host"`
+	Host *Template `json:"host"`
 
 	// Scheme defines request scheme
 	// Default is http
-	Scheme string `json:"scheme"`
+	Scheme *Template `json:"scheme"`
 
 	// API is a http verb + http path
 	// e.g GET /api/v1/users
