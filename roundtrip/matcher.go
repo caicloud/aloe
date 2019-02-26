@@ -45,6 +45,8 @@ type ResponseMatcher struct {
 	vars map[string]jsonutil.Variable
 
 	failures []error
+
+	lastFailures []error
 }
 
 // MatchResponse returns a response matcher
@@ -112,32 +114,33 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 		return false, err
 	}
 	defer close.Close(resp.Body)
+	m.lastFailures = nil
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		m.failures = append(m.failures, fmt.Errorf("can't read body from response"))
+		m.fail("can't read body from response")
 		return false, nil
 	}
 	if m.code != 0 && resp.StatusCode != m.code {
-		m.failures = append(m.failures, fmt.Errorf("status code is not matched, expected: %v, actual: %v", m.code, resp.StatusCode))
-		m.failures = append(m.failures, fmt.Errorf("api status: %v", string(body)))
+		m.fail("status code is not matched, expected: %v, actual: %v", m.code, resp.StatusCode)
+		m.fail("api status: %v", string(body))
 	}
 
 	for k, v := range m.headers {
 		hv := resp.Header.Get(k)
 		if hv != v {
-			m.failures = append(m.failures, fmt.Errorf("response header %v is not matched, expected: %v, actual: %v", k, v, hv))
+			m.fail("response header %v is not matched, expected: %v, actual: %v", k, v, hv)
 		}
 	}
 
 	if m.emptyBody && len(body) != 0 {
-		m.failures = append(m.failures, fmt.Errorf("body should be empty, actual: %v", string(body)))
+		m.fail("body should be empty, actual: %v", string(body))
 	}
 
 	if m.bodyMatcher != nil {
 		var b interface{}
 		if err := json.Unmarshal(body, &b); err != nil {
-			m.failures = append(m.failures, fmt.Errorf("can't unmarshal body(%v) to json, NOW only json Content-Type is supported", string(body)))
+			m.fail("can't unmarshal body(%v) to json, NOW only json Content-Type is supported", string(body))
 			return false, nil
 
 		}
@@ -153,10 +156,10 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 			return nil
 		}(); err != nil {
 			// TODO(zjj2wry): print got data when 'want' not match 'got'
-			m.failures = append(m.failures, fmt.Errorf("can't match response body: \n%v", err))
+			m.fail("can't match response body: \n%v", err)
 		}
 	}
-	if len(m.failures) > 0 {
+	if len(m.lastFailures) > 0 {
 		return false, nil
 	}
 
@@ -167,7 +170,7 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 		case runtime.BodyType:
 			v, err := jsonutil.GetVariable(body, def.Name, def.Selector...)
 			if err != nil {
-				m.failures = append(m.failures, err)
+				m.fail("can't get variable %s: %v", def.Name, err)
 				isErr = true
 			}
 			m.vars[def.Name] = v
@@ -175,7 +178,7 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 			m.vars[def.Name] = jsonutil.NewIntVariable(def.Name, int64(resp.StatusCode))
 		case runtime.HeaderType:
 			if len(def.Selector) != 1 {
-				m.failures = append(m.failures, fmt.Errorf("header definition expected selector with len 1, actual is %v", def.Selector))
+				m.fail("header definition expected selector with len 1, actual is %v", def.Selector)
 			}
 			m.vars[def.Name] = jsonutil.NewStringVariable(def.Name, resp.Header.Get(def.Selector[0]))
 		}
@@ -185,6 +188,12 @@ func (m *ResponseMatcher) Match(actual interface{}) (bool, error) {
 	}
 	m.parsed = true
 	return true, nil
+}
+
+func (m *ResponseMatcher) fail(templ string, args ...interface{}) {
+	err := fmt.Errorf(templ, args...)
+	m.lastFailures = append(m.lastFailures, err)
+	m.failures = append(m.failures, err)
 }
 
 // FailureMessage implements gomegatypes.GomegaMatcher
