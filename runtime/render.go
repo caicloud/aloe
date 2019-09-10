@@ -165,9 +165,11 @@ func renderRequest(ctx *Context, runtimereq *Request, req *types.Request) error 
 			runtimereq.Path = path
 		}
 	}
-	if err := renderHeader(ctx, runtimereq.Headers, req.Headers); err != nil {
+	currentHeaders, err := renderHeader(ctx, runtimereq.Headers, req.Headers)
+	if err != nil {
 		return err
 	}
+	runtimereq.Headers = currentHeaders
 	if req.Body != nil {
 		body, err := req.Body.Render(ctx.Variables)
 		if err != nil {
@@ -183,9 +185,11 @@ func renderResponse(ctx *Context, resp *Response, respConf *types.Response) erro
 		resp.StatusCode = respConf.StatusCode
 	}
 
-	if err := renderHeader(ctx, resp.Headers, respConf.Headers); err != nil {
+	currentHeaders, err := renderHeader(ctx, resp.Headers, respConf.Headers)
+	if err != nil {
 		return err
 	}
+	resp.Headers = currentHeaders
 
 	if respConf.Body != nil {
 		body, err := respConf.Body.Render(ctx.Variables)
@@ -246,18 +250,18 @@ func renderDefinition(ctx *Context, dcs []types.Definition) ([]Definition, error
 	return ds, nil
 }
 
-func renderHeader(ctx *Context, current map[string]string, headers map[string]types.Template) error {
+func renderHeader(ctx *Context, current map[string]string, headers map[string]types.Template) (map[string]string, error) {
 	if current == nil {
 		current = map[string]string{}
 	}
 	for k, v := range headers {
 		value, err := v.Render(ctx.Variables)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		current[k] = value
 	}
-	return nil
+	return current, nil
 }
 
 // RenderWhen will render condition config into runtime condition
